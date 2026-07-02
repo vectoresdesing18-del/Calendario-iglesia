@@ -1,1 +1,1 @@
-Reemplaza js/app.js y js/firebase.js en GitHub. Luego abre la app con ?v=fix-script-2
+Reemplaza js/app.js y js/firebase.js. Luego pega css/equipo-editable.css al final de css/style.css. Abre con ?v=equipo-edit-1

@@ -1,0 +1,20 @@
+
+/* === Equipo editable === */
+.card-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:14px;
+}
+.editable-card .btn{
+  padding:8px 10px;
+  font-size:12px;
+}
+#deletePersonBtn{
+  margin-right:auto;
+}
+@media(max-width:900px){
+  .card-actions .btn{
+    flex:1;
+  }
+}
