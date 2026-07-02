@@ -1,0 +1,1 @@
+Reemplaza js/app.js y js/firebase.js en GitHub. Luego abre la app con ?v=fix-script-2
