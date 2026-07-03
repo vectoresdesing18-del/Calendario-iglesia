@@ -1,1 +1,0 @@
-Reemplaza js/app.js y js/firebase.js. Luego pega css/equipo-editable.css al final de css/style.css. Abre con ?v=equipo-edit-1
