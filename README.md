@@ -86,3 +86,9 @@ Para conectar Google Calendar, usa Google Chrome.
 - Botón "Descargar imagen" también en Calendario.
 - Exporta PNG del mes seleccionado para WhatsApp.
 - Cache busting aplicado con ?v=7.2.
+
+
+## V7.3
+- Dashboard incluye avance de series bíblicas.
+- Muestra porcentaje, barra de progreso, capítulos completados y capítulos restantes.
+- Cache busting aplicado con ?v=7.3.

@@ -254,6 +254,43 @@ function eventClass(type = "") {
   return "";
 }
 
+function seriesPercent(serie) {
+  const chapters = Math.max(1, Number(serie.chapters || 1));
+  const done = Math.min(chapters, Math.max(0, Number(serie.done || 0)));
+  return Math.round((done / chapters) * 100);
+}
+
+function renderDashboardSeriesProgress() {
+  const series = state.data.series || [];
+
+  if (!series.length) {
+    return `<p class="muted">Aún no hay series bíblicas registradas.</p>`;
+  }
+
+  return series.map((serie) => {
+    const chapters = Math.max(1, Number(serie.chapters || 1));
+    const done = Math.min(chapters, Math.max(0, Number(serie.done || 0)));
+    const pct = seriesPercent(serie);
+    const remaining = Math.max(0, chapters - done);
+
+    return `
+      <div class="series-progress-item">
+        <div class="series-progress-head">
+          <strong>${escapeHtml(serie.name)}</strong>
+          <span>${pct}%</span>
+        </div>
+        <div class="series-progress-bar">
+          <i style="width:${pct}%"></i>
+        </div>
+        <div class="series-progress-meta">
+          <span>${done} de ${chapters} completados</span>
+          <span>${remaining ? `Restan ${remaining}` : "Serie completada"}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
 function statusPills() {
   const session = state.authResolved
     ? state.user
@@ -305,7 +342,7 @@ function renderTopbar() {
       <div class="brand">
         <div class="brand-mark">✝</div>
         <div>
-          <h1>Planificación Litúrgica V7.2</h1>
+          <h1>Planificación Litúrgica V7.3.3</h1>
           <p>${escapeHtml(state.data.churchName || "Sistema ministerial")}</p>
         </div>
       </div>
@@ -483,6 +520,14 @@ function renderDashboard() {
           </div>
           <div class="alerts">
             ${alerts.map(([level, text]) => `<div class="alert ${level}">${escapeHtml(text)}</div>`).join("")}
+          </div>
+
+          <div class="series-dashboard-box">
+            <div class="panel-head compact-head">
+              <h3>Avance de series bíblicas</h3>
+              <strong>Porcentaje</strong>
+            </div>
+            ${renderDashboardSeriesProgress()}
           </div>
 
           <div class="premium-stats">
