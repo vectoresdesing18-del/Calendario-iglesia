@@ -81,12 +81,8 @@ https://vectoresdesing18-del.github.io
 Para conectar Google Calendar, usa Google Chrome.
 
 
-## Nueva función
-- Descarga de imagen mensual estilo WhatsApp desde Dashboard y Calendario.
-
-
-## V7.1.1
-Corrección de caché para que aparezca el botón "Descargar imagen".
-Después de subir, abrir con:
-
-https://vectoresdesing18-del.github.io/Calendario-iglesia/?v=7-1-1
+## V7.2
+- Botón global "Imagen" visible en la barra superior.
+- Botón "Descargar imagen" también en Calendario.
+- Exporta PNG del mes seleccionado para WhatsApp.
+- Cache busting aplicado con ?v=7.2.

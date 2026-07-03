@@ -521,6 +521,9 @@ tr:hover td{background:var(--surface2)}
 }
 
 
+.export-top-btn{
+  box-shadow:0 8px 22px rgba(178,139,13,.25);
+}
 .share-stage{
   position:fixed;
   left:-99999px;
@@ -613,7 +616,7 @@ tr:hover td{background:var(--surface2)}
   letter-spacing:-.05em;
 }
 .share-date-weekday{
-  margin-top:8px;
+  margin-bottom:8px;
   font-size:24px;
   font-weight:800;
   letter-spacing:.08em;
@@ -623,7 +626,12 @@ tr:hover td{background:var(--surface2)}
   font-size:28px;
   font-weight:900;
 }
-.share-body{padding:24px 26px 24px 28px;display:flex;flex-direction:column;justify-content:center}
+.share-body{
+  padding:24px 26px 24px 28px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
 .share-body h3{
   font-size:37px;
   line-height:1;
@@ -658,3 +666,10 @@ tr:hover td{background:var(--surface2)}
 .share-card.compact .share-date-time{font-size:24px}
 .share-card.compact .share-body h3{font-size:31px}
 .share-card.compact .share-body p{font-size:19px}
+
+@media(max-width:900px){
+  .export-top-btn{
+    padding:9px 10px;
+    font-size:12px;
+  }
+}

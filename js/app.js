@@ -223,7 +223,7 @@ function currentMonthLabel() {
 function sanitizeFilePart(value = "") {
   return String(value)
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "") || "agenda";
@@ -305,12 +305,13 @@ function renderTopbar() {
       <div class="brand">
         <div class="brand-mark">✝</div>
         <div>
-          <h1>Planificación Litúrgica V7</h1>
+          <h1>Planificación Litúrgica V7.2</h1>
           <p>${escapeHtml(state.data.churchName || "Sistema ministerial")}</p>
         </div>
       </div>
 
       <div class="top-actions">
+        <button class="btn gold export-top-btn" data-action="export-month-image">Imagen</button>
         <button class="icon-btn" data-action="theme">${state.data.theme === "dark" ? "🌙" : "☀️"}</button>
         ${
           state.user
@@ -403,8 +404,7 @@ function renderDashboard() {
       ${pageHead(
         "Dashboard",
         "Centro de control ministerial.",
-        `<button class="btn ghost" data-action="export-month-image">Descargar imagen</button>
-         <button class="btn primary" data-action="event-new">＋ Reunión</button>`
+        `<button class="btn primary" data-action="event-new">＋ Reunión</button>`
       )}
 
       ${statusPills()}
@@ -540,7 +540,7 @@ function renderCalendarView() {
           <strong>${MONTHS[state.month]} ${state.year}</strong>
           <button class="btn ghost" data-action="month-next">›</button>
           <button class="btn secondary" data-action="month-generate">Generar mes</button>
-          <button class="btn ghost" data-action="export-month-image">Descargar imagen</button>
+          <button class="btn gold" data-action="export-month-image">Descargar imagen</button>
         `
       )}
 
@@ -1538,8 +1538,8 @@ function renderMonthlyShareCard(events) {
         ${events.map((event, index) => `
           <article class="share-item ${index % 2 ? "accent" : "dark"}">
             <div class="share-date-box">
-              <div class="share-date-day">${pad(event.day)}</div>
               <div class="share-date-weekday">${escapeHtml(event.weekday.slice(0, 3).toUpperCase())}</div>
+              <div class="share-date-day">${pad(event.day)}</div>
               <div class="share-date-time">${escapeHtml(event.time || "--:--")}</div>
             </div>
             <div class="share-body">
@@ -1554,7 +1554,7 @@ function renderMonthlyShareCard(events) {
 
       <div class="share-footer">
         <span>${churchName}</span>
-        <span>Resumen mensual para WhatsApp</span>
+        <span>Resumen para compartir por WhatsApp</span>
       </div>
     </div>
   `;
@@ -1592,6 +1592,7 @@ async function downloadMonthlyScheduleImage() {
     link.href = canvas.toDataURL("image/png");
     link.download = `programacion-${sanitizeFilePart(currentMonthLabel())}.png`;
     link.click();
+
     showToast("Imagen descargada correctamente.");
   } catch (error) {
     console.error(error);
