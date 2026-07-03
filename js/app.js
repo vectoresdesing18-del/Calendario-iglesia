@@ -216,6 +216,31 @@ function monthlyEvents() {
   });
 }
 
+function currentMonthLabel() {
+  return `${MONTHS[state.month]} ${state.year}`;
+}
+
+function sanitizeFilePart(value = "") {
+  return String(value)
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "agenda";
+}
+
+function monthlyShareEvents() {
+  return monthlyEvents().map((event) => {
+    const [y, m, d] = event.date.split("-").map(Number);
+    const jsDate = new Date(y, m - 1, d);
+    return {
+      ...event,
+      day: d,
+      weekday: DAYS[jsDate.getDay()]
+    };
+  });
+}
+
 function futureEvents() {
   return sortedEvents().filter((event) => event.date >= today());
 }
@@ -378,7 +403,8 @@ function renderDashboard() {
       ${pageHead(
         "Dashboard",
         "Centro de control ministerial.",
-        `<button class="btn primary" data-action="event-new">＋ Reunión</button>`
+        `<button class="btn ghost" data-action="export-month-image">Descargar imagen</button>
+         <button class="btn primary" data-action="event-new">＋ Reunión</button>`
       )}
 
       ${statusPills()}
@@ -514,6 +540,7 @@ function renderCalendarView() {
           <strong>${MONTHS[state.month]} ${state.year}</strong>
           <button class="btn ghost" data-action="month-next">›</button>
           <button class="btn secondary" data-action="month-generate">Generar mes</button>
+          <button class="btn ghost" data-action="export-month-image">Descargar imagen</button>
         `
       )}
 
@@ -1063,6 +1090,7 @@ document.addEventListener("click", async (event) => {
     }
 
     if (action === "month-generate") await generateMonth();
+    if (action === "export-month-image") await downloadMonthlyScheduleImage();
 
     if (action === "event-new") openModal("event");
     if (action === "event-new-guest") openModal("event", { isGuest: true });
@@ -1487,6 +1515,89 @@ async function sendEventObjectToCalendar(eventData) {
   } catch (error) {
     console.error(error);
     showToast("Error al enviar a Calendar.");
+  }
+}
+
+function renderMonthlyShareCard(events) {
+  const compact = events.length >= 7 ? " compact" : "";
+  const churchName = escapeHtml(state.data.churchName || "Iglesia local");
+
+  return `
+    <div class="share-card${compact}">
+      <div class="share-topline"></div>
+      <div class="share-heading">
+        <p class="share-kicker">PROGRAMACIÓN</p>
+        <h1 class="share-title">DEL MES</h1>
+        <div class="share-meta">
+          <span>${escapeHtml(currentMonthLabel().toUpperCase())}</span>
+          <span>${churchName}</span>
+        </div>
+      </div>
+
+      <div class="share-list">
+        ${events.map((event, index) => `
+          <article class="share-item ${index % 2 ? "accent" : "dark"}">
+            <div class="share-date-box">
+              <div class="share-date-day">${pad(event.day)}</div>
+              <div class="share-date-weekday">${escapeHtml(event.weekday.slice(0, 3).toUpperCase())}</div>
+              <div class="share-date-time">${escapeHtml(event.time || "--:--")}</div>
+            </div>
+            <div class="share-body">
+              <h3>${escapeHtml(event.type || "Reunión")}</h3>
+              <p><strong>Predicador:</strong> ${escapeHtml(event.preacher || "Por confirmar")}</p>
+              <p><strong>Coordinador:</strong> ${escapeHtml(event.coordinator || "Por confirmar")}</p>
+              <p><strong>Pasaje bíblico:</strong> ${escapeHtml(event.passage || "Por confirmar")}</p>
+            </div>
+          </article>
+        `).join("")}
+      </div>
+
+      <div class="share-footer">
+        <span>${churchName}</span>
+        <span>Resumen mensual para WhatsApp</span>
+      </div>
+    </div>
+  `;
+}
+
+async function downloadMonthlyScheduleImage() {
+  const events = monthlyShareEvents();
+
+  if (!events.length) {
+    showToast("No hay reuniones en este mes para exportar.");
+    return;
+  }
+
+  if (!window.html2canvas) {
+    showToast("No se pudo cargar el exportador de imagen.");
+    return;
+  }
+
+  const stage = document.createElement("div");
+  stage.className = "share-stage";
+  stage.innerHTML = renderMonthlyShareCard(events);
+  document.body.appendChild(stage);
+
+  try {
+    if (document.fonts?.ready) await document.fonts.ready;
+
+    const card = stage.querySelector(".share-card");
+    const canvas = await window.html2canvas(card, {
+      backgroundColor: null,
+      scale: 2,
+      useCORS: true
+    });
+
+    const link = document.createElement("a");
+    link.href = canvas.toDataURL("image/png");
+    link.download = `programacion-${sanitizeFilePart(currentMonthLabel())}.png`;
+    link.click();
+    showToast("Imagen descargada correctamente.");
+  } catch (error) {
+    console.error(error);
+    showToast("No se pudo generar la imagen.");
+  } finally {
+    stage.remove();
   }
 }
 

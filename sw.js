@@ -1,12 +1,12 @@
-const CACHE_NAME = "liturgica-v7-shell-v1";
+const CACHE_NAME = "liturgica-v7-1-1-shell";
 const SHELL = [
   "./",
   "./index.html",
-  "./css/style.css",
-  "./js/app.js",
+  "./css/style.css?v=7.1.1",
+  "./js/app.js?v=7.1.1",
   "./js/firebase.js",
   "./js/calendar.js",
-  "./manifest.webmanifest",
+  "./manifest.webmanifest?v=7.1.1",
   "./assets/icon.svg"
 ];
 
