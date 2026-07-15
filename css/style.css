@@ -946,3 +946,8 @@ tr:hover td{background:var(--surface2)}
 
 /* invitados listados junto a predicadores en Equipo */
 .guest-avatar{background:linear-gradient(135deg,var(--butter),var(--gold))}
+
+/* campo Pasaje con botón de sugerencia */
+.inline-field{display:flex;gap:8px;margin-top:6px}
+.inline-field input{margin-top:0;flex:1}
+.inline-field .btn{margin-top:0;white-space:nowrap;flex:0 0 auto}

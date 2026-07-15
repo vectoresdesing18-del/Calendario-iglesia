@@ -293,6 +293,18 @@ function effectivePericopeIndex(serie) {
   return Math.min(list.length, Math.max(stored, synced));
 }
 
+// Busca la serie vinculada al tipo de reunión (según Config. > Horarios)
+// y devuelve la próxima pericopa sugerida en orden, o null si no aplica.
+function suggestedPericopeForType(type) {
+  const schedule = (state.data.settings.schedules || []).find((s) => s.type === type && s.seriesId);
+  if (!schedule) return null;
+  const serie = state.data.series.find((s) => s.id === schedule.seriesId);
+  if (!serie) return null;
+  const list = pericopesFor(serie);
+  const index = effectivePericopeIndex(serie);
+  return index < list.length ? list[index] : null;
+}
+
 function renderDashboardSeriesProgress() {
   const series = state.data.series || [];
 
@@ -474,7 +486,7 @@ function renderTopbar() {
       <div class="brand">
         <div class="brand-mark">✝</div>
         <div>
-          <h1>Planificación Litúrgica V8.4</h1>
+          <h1>Planificación Litúrgica V8.5</h1>
           <p>${escapeHtml(state.data.churchName || "Sistema ministerial")}</p>
         </div>
       </div>
@@ -1033,6 +1045,13 @@ function renderEventModal() {
 
   const preachers = state.data.people.filter((person) => person.role === "Predicador" || person.role === "Ambos");
   const coordinators = state.data.people.filter((person) => person.role === "Coordinador" || person.role === "Ambos");
+  const guestPreachers = state.data.guests;
+
+  const initialSuggestion = !item ? suggestedPericopeForType(event.type) : null;
+  if (initialSuggestion && !event.passage) {
+    event.passage = initialSuggestion.ref;
+    event.title = initialSuggestion.title || "";
+  }
 
   return `
     <div class="modal-wrap">
@@ -1057,7 +1076,20 @@ function renderEventModal() {
             Predicador
             <select id="eventPreacher">
               <option value="">— Seleccionar —</option>
-              ${preachers.map((person) => `<option ${event.preacher === person.name ? "selected" : ""}>${escapeHtml(person.name)}</option>`).join("")}
+              ${
+                preachers.length
+                  ? `<optgroup label="Equipo">
+                      ${preachers.map((person) => `<option ${event.preacher === person.name ? "selected" : ""}>${escapeHtml(person.name)}</option>`).join("")}
+                    </optgroup>`
+                  : ""
+              }
+              ${
+                guestPreachers.length
+                  ? `<optgroup label="Invitados">
+                      ${guestPreachers.map((guest) => `<option value="${escapeHtml(guest.name)}" ${event.preacher === guest.name ? "selected" : ""}>🙋 ${escapeHtml(guest.name)}</option>`).join("")}
+                    </optgroup>`
+                  : ""
+              }
             </select>
           </label>
 
@@ -1077,7 +1109,13 @@ function renderEventModal() {
             </select>
           </label>
 
-          ${inputField("Pasaje", "eventPassage", "text", event.passage, "full", "Ej: Hebreos 2:11–15")}
+          <label class="full">
+            Pasaje
+            <div class="inline-field">
+              <input id="eventPassage" type="text" value="${escapeHtml(event.passage || "")}" placeholder="Ej: Hebreos 2:11–15">
+              <button type="button" class="btn ghost small" data-action="event-suggest-passage">📖 Sugerir</button>
+            </div>
+          </label>
           ${inputField("Título", "eventTitle", "text", event.title, "full", "Ej: Jesús comparte nuestra humanidad")}
 
           <label class="full">
@@ -1311,6 +1349,18 @@ document.addEventListener("click", async (event) => {
     if (action === "event-save") await saveEvent(id);
     if (action === "event-delete") await deleteEvent(id);
 
+    if (action === "event-suggest-passage") {
+      const type = $("#eventType").value;
+      const suggestion = suggestedPericopeForType(type);
+      if (!suggestion) {
+        showToast("Ese tipo de reunión no tiene una serie vinculada en Config.");
+      } else {
+        $("#eventPassage").value = suggestion.ref;
+        $("#eventTitle").value = suggestion.title || "";
+        showToast(`Sugerido: ${suggestion.ref}`);
+      }
+    }
+
     if (action === "calendar-connect") await handleConnectCalendar();
     if (action === "calendar-send") await sendEventToCalendar(id);
 
@@ -1500,15 +1550,18 @@ async function generateMonth() {
 
 async function saveEvent(id) {
   const oldEvent = id ? state.data.events.find((event) => event.id === id) : null;
+  const preacherValue = $("#eventPreacher").value;
+  const isGuestPreacher = state.data.guests.some((guest) => guest.name === preacherValue);
+  const guestValue = $("#eventGuest").value || (isGuestPreacher ? preacherValue : "");
 
   const eventData = {
     id: id || uid(),
     date: $("#eventDate").value,
     time: $("#eventTime").value,
     type: $("#eventType").value,
-    preacher: $("#eventPreacher").value,
+    preacher: preacherValue,
     coordinator: $("#eventCoordinator").value,
-    guest: $("#eventGuest").value,
+    guest: guestValue,
     passage: $("#eventPassage").value.trim(),
     title: $("#eventTitle").value.trim(),
     notes: $("#eventNotes").value.trim(),
