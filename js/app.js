@@ -70,7 +70,7 @@ function uid() {
 
 function createDefaults() {
   return {
-    theme: "dark",
+    theme: "light",
     churchName: "Iglesia Bautista Fe y Gracia de Dios",
     settings: {
       autoCalendarOnSave: false,
@@ -291,6 +291,104 @@ function renderDashboardSeriesProgress() {
   }).join("");
 }
 
+function nextEventForType(type) {
+  return futureEvents().find((event) => event.type === type) || null;
+}
+
+const TYPE_ICON = {
+  "Culto Dominical": "⛪",
+  "Cena del Señor": "🍞",
+  "Acción de Gracias": "🙏",
+  "Reunión de Oración": "🕊",
+  "Estudio Bíblico": "📖",
+  "Culto Familiar": "🏡",
+  "Invitado": "🙋"
+};
+
+function seriesStats() {
+  const series = state.data.series || [];
+  if (!series.length) {
+    return { count: 0, avgPct: 0, doneChapters: 0, active: 0, feature: null };
+  }
+  const pctList = series.map(seriesPercent);
+  const avgPct = Math.round(pctList.reduce((a, b) => a + b, 0) / series.length);
+  const doneChapters = series.reduce((sum, s) => sum + Math.min(Number(s.chapters || 0), Math.max(0, Number(s.done || 0))), 0);
+  const active = series.filter((s) => seriesPercent(s) < 100).length;
+  const feature = series.find((s) => seriesPercent(s) < 100) || series[0];
+  return { count: series.length, avgPct, doneChapters, active, feature };
+}
+
+function renderHeroMeetingCard(schedule, colorClass) {
+  const next = nextEventForType(schedule.type);
+  const icon = TYPE_ICON[schedule.type] || "📌";
+  const complete = next && next.preacher && next.coordinator && next.passage;
+
+  return `
+    <article class="hero-card ${colorClass}">
+      <div class="hero-card-top">
+        <div class="hero-avatars">
+          ${next && next.preacher ? `<span class="mini-avatar">${initials(next.preacher)}</span>` : ""}
+          ${next && next.coordinator ? `<span class="mini-avatar">${initials(next.coordinator)}</span>` : ""}
+          ${!next ? `<span class="mini-avatar muted-avatar">${icon}</span>` : ""}
+        </div>
+        <span class="status-chip ${next ? (complete ? "ok" : "warn") : "off"}">
+          ${next ? (complete ? "Confirmado" : "Faltan datos") : "Sin programar"}
+        </span>
+      </div>
+      <div class="hero-card-bottom">
+        <p class="hero-day">${DAYS[schedule.day].toUpperCase()}</p>
+        <div class="hero-card-row">
+          <div class="hero-card-info">
+            <strong>${escapeHtml(schedule.type)}</strong>
+            <small>${next ? escapeHtml(next.passage || "Pasaje pendiente") : "Aún no hay reunión generada"}</small>
+            <small class="hero-card-meta">${next ? `${fmt(next.date)} · ${escapeHtml(next.time || schedule.time)}` : `Cada ${DAYS[schedule.day].toLowerCase()} · ${schedule.time}`}</small>
+          </div>
+          <button class="hero-arrow" data-action="${next ? "event-edit" : "event-new"}" ${next ? `data-id="${next.id}"` : ""}>↗</button>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function renderMiniCalendar() {
+  const firstDow = new Date(state.year, state.month, 1).getDay();
+  const daysInMonth = new Date(state.year, state.month + 1, 0).getDate();
+  const startPad = (firstDow + 6) % 7; // Monday-first grid
+  const eventDates = new Set(monthlyEvents().map((event) => Number(event.date.split("-")[2])));
+  const todayStr = today();
+
+  let cells = "";
+  for (let i = 0; i < startPad; i++) cells += `<span></span>`;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dow = new Date(state.year, state.month, d).getDay();
+    const isMainDay = dow === 0 || dow === 4;
+    const dateStr = `${state.year}-${pad(state.month + 1)}-${pad(d)}`;
+    const isToday = dateStr === todayStr;
+    const cls = isToday ? "mini-today" : isMainDay ? "mini-main" : "";
+    cells += `
+      <button class="mini-day ${cls}" data-action="calendar-jump" data-date="${dateStr}">
+        ${d}${eventDates.has(d) ? `<i class="mini-dot"></i>` : ""}
+      </button>
+    `;
+  }
+
+  return `
+    <div class="mini-cal">
+      <div class="mini-cal-head">
+        <strong>${MONTHS[state.month]} ${state.year}</strong>
+        <div class="mini-cal-nav">
+          <button data-action="month-prev">‹</button>
+          <button data-action="month-next">›</button>
+        </div>
+      </div>
+      <div class="mini-cal-weekdays">
+        ${["LU", "MA", "MI", "JU", "VI", "SA", "DO"].map((d) => `<span>${d}</span>`).join("")}
+      </div>
+      <div class="mini-cal-grid">${cells}</div>
+    </div>
+  `;
+}
+
 function statusPills() {
   const session = state.authResolved
     ? state.user
@@ -342,7 +440,7 @@ function renderTopbar() {
       <div class="brand">
         <div class="brand-mark">✝</div>
         <div>
-          <h1>Planificación Litúrgica V7.3.3</h1>
+          <h1>Planificación Litúrgica V8.0</h1>
           <p>${escapeHtml(state.data.churchName || "Sistema ministerial")}</p>
         </div>
       </div>
@@ -411,140 +509,119 @@ function renderCurrentView() {
 function renderDashboard() {
   const events = sortedEvents();
   const future = futureEvents();
-  const next = future[0] || null;
   const monthly = monthlyEvents();
   const pending = events.filter((event) => !event.preacher || !event.coordinator || !event.passage).length;
 
-  const preacherCount = {};
-  events.forEach((event) => {
-    if (event.preacher) {
-      preacherCount[event.preacher] = (preacherCount[event.preacher] || 0) + 1;
-    }
-  });
-
-  const topPreachers = Object.entries(preacherCount)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
-
   const alerts = [];
-
   future.slice(0, 8).forEach((event) => {
     if (!event.preacher) alerts.push(["err", `Falta predicador: ${fmt(event.date)} ${event.type}`]);
     if (!event.coordinator) alerts.push(["warn", `Falta coordinador: ${fmt(event.date)} ${event.type}`]);
     if (!event.passage) alerts.push(["warn", `Falta pasaje: ${fmt(event.date)} ${event.type}`]);
   });
-
   if (!alerts.length) alerts.push(["ok", "Todo listo en las próximas reuniones."]);
 
+  const schedules = state.data.settings.schedules || [];
+  const heroSchedules = [
+    ...schedules.filter((s) => s.day === 4),
+    ...schedules.filter((s) => s.day === 0)
+  ];
+  const otherSchedules = schedules.filter((s) => s.day !== 4 && s.day !== 0);
+
+  const colorClasses = ["sage", "pink", "butter", "lilac"];
+  const stats = seriesStats();
+
   return `
-    <section class="view">
-      ${pageHead(
-        "Dashboard",
-        "Centro de control ministerial.",
-        `<button class="btn primary" data-action="event-new">＋ Reunión</button>`
-      )}
+    <section class="view dashboard-view">
+      <div class="welcome-head">
+        <div>
+          <h1>Bienvenido de nuevo 👋</h1>
+          <p>${escapeHtml(state.data.churchName || "Sistema ministerial")}</p>
+        </div>
+        <button class="btn primary" data-action="event-new">＋ Reunión</button>
+      </div>
 
       ${statusPills()}
 
-      <div class="cards">
-        <article class="card hero">
-          <span>Próxima reunión</span>
-          <h3>${next ? `${escapeHtml(next.type)} · ${fmt(next.date)}` : "—"}</h3>
-          <p>
+      <div class="dash-grid">
+        <div class="dash-col-main">
+          <h3 class="section-label">Reuniones principales <span>(${heroSchedules.length || schedules.length})</span></h3>
+          <div class="hero-row">
             ${
-              next
-                ? `${escapeHtml(next.time || "")} · ${escapeHtml(next.preacher || "Predicador pendiente")} · ${escapeHtml(next.passage || "Pasaje pendiente")}`
-                : "No hay reuniones próximas."
-            }
-          </p>
-          ${
-            next
-              ? `<div class="hero-actions">
-                  <button class="btn light" data-action="event-edit" data-id="${next.id}">Editar</button>
-                  ${next.calendarId ? "" : `<button class="btn light" data-action="calendar-send" data-id="${next.id}">Enviar a Calendar</button>`}
-                </div>`
-              : ""
-          }
-        </article>
-
-        <article class="card">
-          <span>Este mes</span>
-          <h3>${monthly.length}</h3>
-          <p>reuniones</p>
-        </article>
-
-        <article class="card">
-          <span>Pendientes</span>
-          <h3>${pending}</h3>
-          <p>faltan datos</p>
-        </article>
-
-        <article class="card">
-          <span>Series</span>
-          <h3>${state.data.series.length}</h3>
-          <p>en seguimiento</p>
-        </article>
-      </div>
-
-      <div class="two-col">
-        <section class="panel">
-          <div class="panel-head">
-            <h3>Agenda mensual</h3>
-            <strong>${MONTHS[state.month]} ${state.year}</strong>
-          </div>
-          <div class="agenda">
-            ${
-              monthly.length
-                ? monthly.map((event) => `
-                    <div class="agenda-item">
-                      <div class="agenda-date">
-                        ${Number(event.date.split("-")[2])}
-                        <small>${escapeHtml(event.time || "")}</small>
-                      </div>
-                      <div class="agenda-main">
-                        <strong>${escapeHtml(event.type)}</strong>
-                        <small>${escapeHtml(event.preacher || "Predicador pendiente")} · ${escapeHtml(event.coordinator || "Coordinador pendiente")}</small>
-                      </div>
-                      <span class="badge">${escapeHtml(event.passage || "Sin pasaje")}</span>
-                    </div>
-                  `).join("")
-                : `<p class="muted">No hay reuniones este mes.</p>`
+              heroSchedules.length
+                ? heroSchedules.map((s, i) => renderHeroMeetingCard(s, colorClasses[i % 4])).join("")
+                : schedules.length
+                  ? schedules.slice(0, 2).map((s, i) => renderHeroMeetingCard(s, colorClasses[i % 4])).join("")
+                  : `<p class="muted">Configura tus horarios semanales en Config. para verlos aquí.</p>`
             }
           </div>
-        </section>
 
-        <section class="panel">
-          <div class="panel-head">
-            <h3>Alertas</h3>
-            <strong>Estado</strong>
-          </div>
-          <div class="alerts">
-            ${alerts.map(([level, text]) => `<div class="alert ${level}">${escapeHtml(text)}</div>`).join("")}
-          </div>
-
-          <div class="series-dashboard-box">
-            <div class="panel-head compact-head">
-              <h3>Avance de series bíblicas</h3>
-              <strong>Porcentaje</strong>
+          <h3 class="section-label">Progreso de estudio bíblico</h3>
+          <div class="stat-pill-row">
+            <div class="stat-pill" style="background:var(--butter)">
+              <span>Capítulos completados</span>
+              <strong>${stats.doneChapters}</strong>
             </div>
-            ${renderDashboardSeriesProgress()}
+            <div class="stat-pill" style="background:var(--pink)">
+              <span>Progreso promedio</span>
+              <strong>${stats.avgPct}%</strong>
+            </div>
+            <div class="stat-pill" style="background:var(--lilac)">
+              <span>Series activas</span>
+              <strong>${stats.active}</strong>
+            </div>
           </div>
 
-          <div class="premium-stats">
-            <h3>Predicaciones por persona</h3>
+          ${
+            stats.feature
+              ? `<div class="series-feature">
+                  <div class="series-feature-head">
+                    <span>📖 Estudio actual</span>
+                    <small>${Math.min(Number(stats.feature.chapters || 0), Math.max(0, Number(stats.feature.done || 0)))}/${stats.feature.chapters} capítulos</small>
+                  </div>
+                  <strong>${escapeHtml(stats.feature.name)}</strong>
+                  <div class="series-feature-bar"><i style="width:${seriesPercent(stats.feature)}%"></i></div>
+                </div>`
+              : `<p class="muted">Aún no hay series bíblicas registradas.</p>`
+          }
+
+          ${stats.count > 1 ? `<div class="series-mini-list">${renderDashboardSeriesProgress()}</div>` : ""}
+        </div>
+
+        <div class="dash-col-side">
+          <h3 class="section-label">Calendario</h3>
+          ${renderMiniCalendar()}
+
+          <h3 class="section-label">Próximas reuniones</h3>
+          <div class="schedule-mini-list">
             ${
-              topPreachers.length
-                ? topPreachers.map(([name, count]) => `
-                    <div class="stat-bar">
-                      <span>${escapeHtml(name)}</span>
-                      <strong>${count}</strong>
-                      <i style="width:${Math.max(12, count * 16)}px"></i>
-                    </div>
+              future.length
+                ? future.slice(0, 4).map((event) => `
+                    <button class="schedule-mini-item" data-action="event-edit" data-id="${event.id}">
+                      <span class="schedule-mini-icon">${TYPE_ICON[event.type] || "📌"}</span>
+                      <span class="schedule-mini-text">
+                        <strong>${escapeHtml(event.type)}</strong>
+                        <small>${fmt(event.date)} · ${escapeHtml(event.time || "")}</small>
+                      </span>
+                    </button>
                   `).join("")
-                : `<p class="muted">Aún no hay predicaciones asignadas.</p>`
+                : `<p class="muted">No hay próximas reuniones generadas.</p>`
             }
+            ${otherSchedules.length ? otherSchedules.map((s) => `
+              <div class="schedule-mini-item template">
+                <span class="schedule-mini-icon">${TYPE_ICON[s.type] || "📌"}</span>
+                <span class="schedule-mini-text">
+                  <strong>${escapeHtml(s.type)}</strong>
+                  <small>${DAYS[s.day]} · ${s.time}</small>
+                </span>
+              </div>
+            `).join("") : ""}
           </div>
-        </section>
+
+          <h3 class="section-label">Alertas <small>(${monthly.length} este mes · ${pending} pendientes)</small></h3>
+          <div class="alerts">
+            ${alerts.slice(0, 4).map(([level, text]) => `<div class="alert ${level}">${escapeHtml(text)}</div>`).join("")}
+          </div>
+        </div>
       </div>
     </section>
   `;
@@ -1132,6 +1209,13 @@ document.addEventListener("click", async (event) => {
         state.year++;
       }
       render();
+    }
+
+    if (action === "calendar-jump") {
+      const dateStr = target.dataset.date;
+      const match = state.data.events.find((event) => event.date === dateStr);
+      if (match) openModal("event", { id: match.id });
+      else openModal("event", { date: dateStr });
     }
 
     if (action === "month-generate") await generateMonth();
