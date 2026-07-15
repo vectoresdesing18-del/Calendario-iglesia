@@ -18,7 +18,7 @@ import {
   deleteCalendarEvent
 } from "./calendar.js";
 
-import { pericopesFor, nextPericope } from "./pericopes.js";
+import { pericopesFor } from "./pericopes.js";
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -263,6 +263,36 @@ function seriesPercent(serie) {
   return Math.round((done / chapters) * 100);
 }
 
+// Extrae el capítulo final de una referencia de pericopa, ej:
+// "Hebreos 5:11-6:12" -> 6, "Hebreos 1:1-4" -> 1, "Salmos 1" -> 1
+function pericopeEndChapter(ref = "") {
+  const chapterVerse = [...ref.matchAll(/(\d+):(\d+)/g)];
+  if (chapterVerse.length) return Number(chapterVerse[chapterVerse.length - 1][1]);
+  const trailingNumber = ref.match(/(\d+)\s*$/);
+  return trailingNumber ? Number(trailingNumber[1]) : 0;
+}
+
+// Calcula hasta qué pericopa deberíamos ir según "capítulos completados",
+// para que la sugerencia avance sola cuando editas ese campo en la serie.
+function chapterSyncIndex(serie) {
+  const list = pericopesFor(serie);
+  const done = Number(serie.done || 0);
+  let index = 0;
+  while (index < list.length && pericopeEndChapter(list[index].ref) <= done) {
+    index++;
+  }
+  return index;
+}
+
+// Índice real a usar: el mayor entre el cursor guardado (avanzado manualmente
+// o por "Generar mes") y el que corresponde según capítulos completados.
+function effectivePericopeIndex(serie) {
+  const list = pericopesFor(serie);
+  const stored = Number(serie.pericopeIndex || 0);
+  const synced = chapterSyncIndex(serie);
+  return Math.min(list.length, Math.max(stored, synced));
+}
+
 function renderDashboardSeriesProgress() {
   const series = state.data.series || [];
 
@@ -444,7 +474,7 @@ function renderTopbar() {
       <div class="brand">
         <div class="brand-mark">✝</div>
         <div>
-          <h1>Planificación Litúrgica V8.2</h1>
+          <h1>Planificación Litúrgica V8.4</h1>
           <p>${escapeHtml(state.data.churchName || "Sistema ministerial")}</p>
         </div>
       </div>
@@ -849,8 +879,8 @@ function renderSeriesView() {
           const done = Number(serie.done || 0);
           const pct = chapters ? Math.round((done / chapters) * 100) : 0;
           const list = pericopesFor(serie);
-          const cursor = Number(serie.pericopeIndex || 0);
-          const next = nextPericope(serie);
+          const cursor = effectivePericopeIndex(serie);
+          const next = cursor < list.length ? list[cursor] : null;
 
           return `
             <article class="info-card editable-card">
@@ -1427,7 +1457,7 @@ async function generateMonth() {
         const serie = state.data.series.find((s) => s.id === schedule.seriesId);
         if (serie) {
           const list = pericopesFor(serie);
-          const cursorIndex = cursors[serie.id] ?? Number(serie.pericopeIndex || 0);
+          const cursorIndex = cursors[serie.id] ?? effectivePericopeIndex(serie);
           if (cursorIndex < list.length) {
             const pericope = list[cursorIndex];
             passage = pericope.ref;
@@ -1662,6 +1692,10 @@ async function saveSeries(id) {
     pericopeIndex: Number(existing?.pericopeIndex || 0),
     notes: $("#seriesNotes").value.trim()
   };
+
+  // Si "capítulos completados" avanzó más allá del cursor guardado, la
+  // sugerencia de pericopa se sincroniza con lo que realmente ya estudiaron.
+  serieData.pericopeIndex = effectivePericopeIndex(serieData);
 
   if (!serieData.name) {
     showToast("Escribe la serie.");
@@ -1900,6 +1934,13 @@ async function boot() {
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
+
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (reloaded) return;
+      reloaded = true;
+      window.location.reload();
+    });
   }
 }
 
