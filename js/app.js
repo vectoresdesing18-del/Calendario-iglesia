@@ -72,7 +72,7 @@ function uid() {
 
 function createDefaults() {
   return {
-    theme: "light",
+    theme: "dark",
     churchName: "Iglesia Bautista Fe y Gracia de Dios",
     settings: {
       autoCalendarOnSave: false,
@@ -486,18 +486,26 @@ function renderTopbar() {
       <div class="brand">
         <div class="brand-mark">✝</div>
         <div>
-          <h1>Planificación Litúrgica V8.5</h1>
+          <h1>Planificación Litúrgica</h1>
           <p>${escapeHtml(state.data.churchName || "Sistema ministerial")}</p>
         </div>
       </div>
 
+      <nav class="desktop-nav" aria-label="Navegación principal">
+        ${NAV.map(([id, icon, label]) => `
+          <button class="nav ${state.view === id ? "active" : ""}" data-view="${id}">
+            <span class="nav-icon">${icon}</span>${label}
+          </button>
+        `).join("")}
+      </nav>
+
       <div class="top-actions">
-        <button class="btn gold export-top-btn" data-action="export-month-image">Imagen</button>
-        <button class="icon-btn" data-action="theme">${state.data.theme === "dark" ? "🌙" : "☀️"}</button>
+        <button class="btn gold export-top-btn" data-action="export-month-image" title="Descargar imagen mensual">Imagen</button>
+        <button class="icon-btn" data-action="theme" title="Cambiar apariencia">${state.data.theme === "dark" ? "◐" : "◑"}</button>
         ${
           state.user
-            ? `<button class="btn danger" data-action="logout">Salir</button>`
-            : `<button class="btn primary" data-action="login">Iniciar sesión</button>`
+            ? `<button class="btn ghost" data-action="logout">Salir</button>`
+            : `<button class="btn primary" data-action="login">Ingresar</button>`
         }
       </div>
     </header>
@@ -505,21 +513,13 @@ function renderTopbar() {
 }
 
 function renderSidebar() {
-  return `
-    <aside class="sidebar">
-      ${NAV.map(([id, icon, label]) => `
-        <button class="nav ${state.view === id ? "active" : ""}" data-view="${id}">
-          ${icon} ${label}
-        </button>
-      `).join("")}
-    </aside>
-  `;
+  return "";
 }
 
 function renderMobileTabs() {
   return `
     <nav class="mobile-tabs">
-      ${NAV.slice(0, 4).map(([id, icon, label]) => `
+      ${NAV.map(([id, icon, label]) => `
         <button class="nav ${state.view === id ? "active" : ""}" data-view="${id}">
           ${icon}<span>${label}</span>
         </button>
@@ -580,7 +580,7 @@ function renderDashboard() {
     <section class="view dashboard-view">
       <div class="welcome-head">
         <div>
-          <h1>Bienvenido de nuevo 👋</h1>
+          <h1>Panel de planificación</h1>
           <p>${escapeHtml(state.data.churchName || "Sistema ministerial")}</p>
         </div>
         <button class="btn primary" data-action="event-new">＋ Reunión</button>
@@ -1917,7 +1917,7 @@ function exportBackup() {
 
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = `planificacion-liturgica-v7-${today()}.json`;
+  link.download = `planificacion-liturgica-v9-${today()}.json`;
   link.click();
 }
 

@@ -1,8 +1,9 @@
-const CACHE_NAME = "liturgica-v8-5-shell";
+const CACHE_NAME = "liturgica-v9-ethereal-shell";
 const SHELL = [
   "./",
   "./index.html",
   "./css/style.css",
+  "./css/ethereal.css",
   "./js/app.js",
   "./js/firebase.js",
   "./js/calendar.js",

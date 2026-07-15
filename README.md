@@ -1,94 +1,41 @@
-# Planificación Litúrgica V7.0
+# Planificación Litúrgica V9.0 — Ethereal Midnight
 
-Sistema ministerial para GitHub Pages.
+Rediseño visual completo de la aplicación ministerial, inspirado en dashboards fintech oscuros y premium.
 
-## Incluye
+## Cambios visuales V9.0
 
-- Login con Google mediante Firebase Auth.
-- Firestore por usuario.
-- Sincronización entre PC y celular.
-- Dashboard premium.
+- Contenedor principal oscuro con marco translúcido y fondo ambiental lavanda/azul.
+- Navegación superior central tipo cápsula.
+- Dashboard, calendario, tablas, tarjetas, formularios, ajustes y modales unificados bajo el mismo sistema visual.
+- Tarjetas principales con gradientes menta, lima, coral, violeta y superficies oscuras.
+- Diseño adaptable para PC, tablet y celular.
+- Navegación móvil completa con acceso a todas las secciones.
+- Nueva hoja visual independiente: `css/ethereal.css`.
+
+## Funciones conservadas
+
+- Inicio de sesión con Google y Firebase.
+- Sincronización de datos entre dispositivos.
+- Generación automática de reuniones.
 - Calendario mensual.
-- Generador automático de reuniones por horarios configurables.
-- Reuniones completas.
-- Equipo editable y eliminable.
-- Invitados editables y eliminables.
-- Series bíblicas editables y eliminables.
-- Estadísticas simples por predicador.
-- Google Calendar con recordatorios.
-- Backup JSON.
-- PWA básica instalable.
+- Equipo, invitados y series bíblicas.
+- Google Calendar.
+- Respaldo JSON.
+- Descarga de imagen mensual para WhatsApp.
+- PWA instalable.
 
-## Archivos
+## Publicar en GitHub Pages
 
-```txt
-index.html
-css/style.css
-js/app.js
-js/firebase.js
-js/calendar.js
-manifest.webmanifest
-sw.js
-assets/icon.svg
-firestore.rules
-README.md
+1. Descomprime el ZIP.
+2. En tu repositorio, reemplaza los archivos anteriores por el contenido de la carpeta.
+3. Confirma los cambios en GitHub.
+4. Espera la actualización de GitHub Pages.
+5. Abre la web una vez con `?v=9.0` al final de la dirección.
+
+Ejemplo:
+
+```text
+https://TU-USUARIO.github.io/TU-REPOSITORIO/?v=9.0
 ```
 
-## Subir a GitHub Pages
-
-1. Borra el contenido anterior del repositorio.
-2. Sube el contenido de este ZIP, no el ZIP completo.
-3. Ve a Settings > Pages.
-4. Source: Deploy from a branch.
-5. Branch: main.
-6. Folder: / root.
-7. Abre la app con:
-
-```txt
-?v=v7-release
-```
-
-## Firebase
-
-Ya está configurado para:
-
-```txt
-calendario-iglesia-4517e
-```
-
-## Reglas Firestore
-
-En Firebase > Firestore Database > Reglas, pega el contenido de:
-
-```txt
-firestore.rules
-```
-
-## Google Calendar
-
-El archivo `js/calendar.js` incluye el Client ID que ya estabas usando:
-
-```txt
-636584219049-doqeu47pcle33b3o7p005s2d1mb1u3a9.apps.googleusercontent.com
-```
-
-En Google Cloud debe estar autorizado este origen:
-
-```txt
-https://vectoresdesing18-del.github.io
-```
-
-Para conectar Google Calendar, usa Google Chrome.
-
-
-## V7.2
-- Botón global "Imagen" visible en la barra superior.
-- Botón "Descargar imagen" también en Calendario.
-- Exporta PNG del mes seleccionado para WhatsApp.
-- Cache busting aplicado con ?v=7.2.
-
-
-## V7.3
-- Dashboard incluye avance de series bíblicas.
-- Muestra porcentaje, barra de progreso, capítulos completados y capítulos restantes.
-- Cache busting aplicado con ?v=7.3.
+La caché del Service Worker fue actualizada a `liturgica-v9-ethereal-shell`.

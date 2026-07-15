@@ -1,10 +1,10 @@
 {
-  "name": "Planificación Litúrgica V7",
-  "short_name": "Liturgia V7",
+  "name": "Planificación Litúrgica V9",
+  "short_name": "Liturgia V9",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#EAF0EC",
-  "theme_color": "#EAF0EC",
+  "background_color": "#070a16",
+  "theme_color": "#070a16",
   "description": "Sistema ministerial para planificación litúrgica.",
   "icons": [
     {
