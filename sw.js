@@ -1,4 +1,4 @@
-const CACHE_NAME = "liturgica-v7-3-shell";
+const CACHE_NAME = "liturgica-v8-0-shell";
 const SHELL = [
   "./",
   "./index.html",
