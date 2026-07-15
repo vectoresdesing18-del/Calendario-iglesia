@@ -18,6 +18,8 @@ import {
   deleteCalendarEvent
 } from "./calendar.js";
 
+import { pericopesFor, nextPericope } from "./pericopes.js";
+
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
@@ -90,8 +92,8 @@ function createDefaults() {
     ],
     guests: [],
     series: [
-      { id: uid(), name: "Hebreos", chapters: 13, done: 0, notes: "" },
-      { id: uid(), name: "2 Pedro", chapters: 3, done: 0, notes: "" }
+      { id: uid(), name: "Hebreos", chapters: 13, done: 0, pericopeIndex: 0, notes: "" },
+      { id: uid(), name: "2 Pedro", chapters: 3, done: 0, pericopeIndex: 0, notes: "" }
     ]
   };
 }
@@ -143,7 +145,8 @@ function mergeData(defaultsData, incomingData = {}) {
     people: incomingData.people?.length ? incomingData.people : defaultsData.people,
     events: incomingData.events || [],
     guests: incomingData.guests || [],
-    series: incomingData.series?.length ? incomingData.series : defaultsData.series
+    series: (incomingData.series?.length ? incomingData.series : defaultsData.series)
+      .map((serie) => ({ pericopeIndex: 0, ...serie }))
   };
 }
 
@@ -321,13 +324,14 @@ function seriesStats() {
 function renderHeroMeetingCard(schedule, colorClass) {
   const next = nextEventForType(schedule.type);
   const icon = TYPE_ICON[schedule.type] || "📌";
-  const complete = next && next.preacher && next.coordinator && next.passage;
+  const complete = next && (next.preacher || next.guest) && next.coordinator && next.passage;
 
   return `
     <article class="hero-card ${colorClass}">
       <div class="hero-card-top">
         <div class="hero-avatars">
           ${next && next.preacher ? `<span class="mini-avatar">${initials(next.preacher)}</span>` : ""}
+          ${next && !next.preacher && next.guest ? `<span class="mini-avatar guest-avatar">${initials(next.guest)}</span>` : ""}
           ${next && next.coordinator ? `<span class="mini-avatar">${initials(next.coordinator)}</span>` : ""}
           ${!next ? `<span class="mini-avatar muted-avatar">${icon}</span>` : ""}
         </div>
@@ -440,7 +444,7 @@ function renderTopbar() {
       <div class="brand">
         <div class="brand-mark">✝</div>
         <div>
-          <h1>Planificación Litúrgica V8.0</h1>
+          <h1>Planificación Litúrgica V8.2</h1>
           <p>${escapeHtml(state.data.churchName || "Sistema ministerial")}</p>
         </div>
       </div>
@@ -510,11 +514,11 @@ function renderDashboard() {
   const events = sortedEvents();
   const future = futureEvents();
   const monthly = monthlyEvents();
-  const pending = events.filter((event) => !event.preacher || !event.coordinator || !event.passage).length;
+  const pending = events.filter((event) => !(event.preacher || event.guest) || !event.coordinator || !event.passage).length;
 
   const alerts = [];
   future.slice(0, 8).forEach((event) => {
-    if (!event.preacher) alerts.push(["err", `Falta predicador: ${fmt(event.date)} ${event.type}`]);
+    if (!event.preacher && !event.guest) alerts.push(["err", `Falta predicador: ${fmt(event.date)} ${event.type}`]);
     if (!event.coordinator) alerts.push(["warn", `Falta coordinador: ${fmt(event.date)} ${event.type}`]);
     if (!event.passage) alerts.push(["warn", `Falta pasaje: ${fmt(event.date)} ${event.type}`]);
   });
@@ -742,8 +746,11 @@ function renderPeopleView() {
     <section class="view">
       ${pageHead(
         "Equipo",
-        "Predicadores y coordinadores.",
-        `<button class="btn primary" data-action="person-new">＋ Persona</button>`
+        "Predicadores, coordinadores e invitados que predican.",
+        `
+          <button class="btn secondary" data-action="guest-new">＋ Invitado</button>
+          <button class="btn primary" data-action="person-new">＋ Persona</button>
+        `
       )}
 
       <div class="grid-cards">
@@ -765,6 +772,27 @@ function renderPeopleView() {
               <div class="card-actions">
                 <button class="btn ghost" data-action="person-edit" data-id="${person.id}">Editar</button>
                 <button class="btn danger" data-action="person-delete" data-id="${person.id}">Eliminar</button>
+              </div>
+            </article>
+          `;
+        }).join("")}
+
+        ${state.data.guests.map((guest) => {
+          const preachCount = state.data.events.filter((event) => event.guest === guest.name).length;
+
+          return `
+            <article class="info-card editable-card">
+              <div class="avatar guest-avatar">${initials(guest.name)}</div>
+              <h3>${escapeHtml(guest.name)} <span class="badge gold">Invitado</span></h3>
+              <p>${escapeHtml(guest.church || "Sin referencia")}</p>
+              <p>${escapeHtml(guest.email || "Sin correo")}</p>
+              <p>${escapeHtml(guest.phone || "Sin teléfono")}</p>
+              <div class="inline" style="margin-top:10px">
+                <span class="badge blue">Predica: ${preachCount}</span>
+              </div>
+              <div class="card-actions">
+                <button class="btn ghost" data-action="guest-edit" data-id="${guest.id}">Editar</button>
+                <button class="btn danger" data-action="guest-delete" data-id="${guest.id}">Eliminar</button>
               </div>
             </article>
           `;
@@ -820,6 +848,9 @@ function renderSeriesView() {
           const chapters = Number(serie.chapters || 1);
           const done = Number(serie.done || 0);
           const pct = chapters ? Math.round((done / chapters) * 100) : 0;
+          const list = pericopesFor(serie);
+          const cursor = Number(serie.pericopeIndex || 0);
+          const next = nextPericope(serie);
 
           return `
             <article class="info-card editable-card">
@@ -828,8 +859,19 @@ function renderSeriesView() {
               <div class="progress"><span style="width:${pct}%"></span></div>
               <strong>${pct}% completado</strong>
               <p>${escapeHtml(serie.notes || "")}</p>
+
+              <div class="next-passage">
+                <span>Próximo pasaje sugerido (${cursor}/${list.length})</span>
+                ${
+                  next
+                    ? `<strong>${escapeHtml(next.ref)}</strong>${next.title ? `<small>${escapeHtml(next.title)}</small>` : ""}`
+                    : `<strong class="muted">Orden de pericopas completado</strong>`
+                }
+              </div>
+
               <div class="card-actions">
                 <button class="btn ghost" data-action="series-edit" data-id="${serie.id}">Editar</button>
+                <button class="btn ghost" data-action="series-reset-order" data-id="${serie.id}">Reiniciar orden</button>
                 <button class="btn danger" data-action="series-delete" data-id="${serie.id}">Eliminar</button>
               </div>
             </article>
@@ -861,7 +903,7 @@ function renderSettingsView() {
 
           <div class="schedule-list">
             ${state.data.settings.schedules.map((schedule, index) => `
-              <div class="schedule-row">
+              <div class="schedule-row schedule-row-wide">
                 <select data-schedule-day="${index}">
                   ${DAYS.map((day, dayIndex) => `
                     <option value="${dayIndex}" ${Number(schedule.day) === dayIndex ? "selected" : ""}>${day}</option>
@@ -876,10 +918,21 @@ function renderSettingsView() {
                   `).join("")}
                 </select>
 
+                <select data-schedule-series="${index}">
+                  <option value="">— Sin serie —</option>
+                  ${state.data.series.map((serie) => `
+                    <option value="${serie.id}" ${schedule.seriesId === serie.id ? "selected" : ""}>${escapeHtml(serie.name)}</option>
+                  `).join("")}
+                </select>
+
                 <button class="btn danger" data-action="schedule-delete" data-index="${index}">Eliminar</button>
               </div>
             `).join("")}
           </div>
+
+          <p class="muted" style="margin-top:6px">
+            Si asocias una serie, al generar el mes se sugiere automáticamente el siguiente pasaje según su pericopa, en orden.
+          </p>
 
           <button class="btn secondary" data-action="schedule-add">＋ Agregar horario</button>
 
@@ -1246,6 +1299,14 @@ document.addEventListener("click", async (event) => {
     if (action === "series-save") await saveSeries(id);
     if (action === "series-delete") await deleteSeries(id);
 
+    if (action === "series-reset-order") {
+      const series = state.data.series.map((serie) =>
+        serie.id === id ? { ...serie, pericopeIndex: 0 } : serie
+      );
+      setData((data) => ({ ...data, series }));
+      showToast("Orden de pericopas reiniciado.");
+    }
+
     if (action === "schedule-add") {
       setData((data) => ({
         ...data,
@@ -1293,7 +1354,7 @@ document.addEventListener("click", async (event) => {
 document.addEventListener("change", (event) => {
   const el = event.target;
 
-  if (el.matches("[data-schedule-day], [data-schedule-time], [data-schedule-type]")) {
+  if (el.matches("[data-schedule-day], [data-schedule-time], [data-schedule-type], [data-schedule-series]")) {
     updateSchedulesFromUI();
   }
 
@@ -1317,7 +1378,8 @@ function updateSchedulesFromUI() {
     ...schedule,
     day: Number($(`[data-schedule-day="${index}"]`).value),
     time: $(`[data-schedule-time="${index}"]`).value,
-    type: $(`[data-schedule-type="${index}"]`).value
+    type: $(`[data-schedule-type="${index}"]`).value,
+    seriesId: $(`[data-schedule-series="${index}"]`).value || ""
   }));
 
   setData((data) => ({
@@ -1339,7 +1401,9 @@ async function generateMonth() {
 
   const daysInMonth = new Date(state.year, state.month + 1, 0).getDate();
   const events = [...state.data.events];
+  const cursors = {}; // seriesId -> índice local de pericopa, avanza en orden cronológico
   let added = 0;
+  let assigned = 0;
 
   for (let d = 1; d <= daysInMonth; d++) {
     const date = `${state.year}-${pad(state.month + 1)}-${pad(d)}`;
@@ -1354,28 +1418,54 @@ async function generateMonth() {
         event.type === schedule.type
       );
 
-      if (!exists) {
-        events.push({
-          id: uid(),
-          date,
-          time: schedule.time,
-          type: schedule.type,
-          preacher: "",
-          coordinator: "",
-          guest: "",
-          passage: "",
-          title: "",
-          notes: "",
-          calendarId: ""
-        });
+      if (exists) return;
 
-        added++;
+      let passage = "";
+      let title = "";
+
+      if (schedule.seriesId) {
+        const serie = state.data.series.find((s) => s.id === schedule.seriesId);
+        if (serie) {
+          const list = pericopesFor(serie);
+          const cursorIndex = cursors[serie.id] ?? Number(serie.pericopeIndex || 0);
+          if (cursorIndex < list.length) {
+            const pericope = list[cursorIndex];
+            passage = pericope.ref;
+            title = pericope.title;
+            cursors[serie.id] = cursorIndex + 1;
+            assigned++;
+          }
+        }
       }
+
+      events.push({
+        id: uid(),
+        date,
+        time: schedule.time,
+        type: schedule.type,
+        preacher: "",
+        coordinator: "",
+        guest: "",
+        passage,
+        title,
+        notes: "",
+        calendarId: ""
+      });
+
+      added++;
     });
   }
 
-  setData((data) => ({ ...data, events }));
-  showToast(`${added} reuniones generadas.`);
+  const series = state.data.series.map((serie) =>
+    cursors[serie.id] !== undefined ? { ...serie, pericopeIndex: cursors[serie.id] } : serie
+  );
+
+  setData((data) => ({ ...data, events, series }));
+  showToast(
+    assigned
+      ? `${added} reuniones generadas, ${assigned} con pasaje sugerido.`
+      : `${added} reuniones generadas.`
+  );
 }
 
 async function saveEvent(id) {
@@ -1562,12 +1652,14 @@ async function deleteGuest(id) {
 async function saveSeries(id) {
   const chapters = Number($("#seriesChapters").value || 1);
   const done = Math.min(Number($("#seriesDone").value || 0), chapters);
+  const existing = id ? state.data.series.find((serie) => serie.id === id) : null;
 
   const serieData = {
     id: id || uid(),
     name: $("#seriesName").value.trim(),
     chapters,
     done,
+    pericopeIndex: Number(existing?.pericopeIndex || 0),
     notes: $("#seriesNotes").value.trim()
   };
 

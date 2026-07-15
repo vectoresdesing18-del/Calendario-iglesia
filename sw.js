@@ -1,4 +1,4 @@
-const CACHE_NAME = "liturgica-v8-0-shell";
+const CACHE_NAME = "liturgica-v8-2-shell";
 const SHELL = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const SHELL = [
   "./js/app.js",
   "./js/firebase.js",
   "./js/calendar.js",
+  "./js/pericopes.js",
   "./manifest.webmanifest",
   "./assets/icon.svg"
 ];

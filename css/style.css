@@ -924,3 +924,25 @@ tr:hover td{background:var(--surface2)}
   .hero-row{grid-template-columns:1fr}
   .stat-pill-row{grid-template-columns:1fr 1fr}
 }
+
+/* próximo pasaje sugerido (pericopa) en tarjetas de Series */
+.next-passage{
+  margin:12px 0;
+  padding:12px;
+  background:var(--sage);
+  border-radius:var(--r2);
+}
+.next-passage span{
+  display:block;
+  font-size:10px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  color:rgba(30,28,24,.6);
+  margin-bottom:4px;
+}
+.next-passage strong{display:block;font-size:14px;color:var(--ink)}
+.next-passage small{display:block;font-size:12px;color:rgba(30,28,24,.65);margin-top:2px}
+
+/* invitados listados junto a predicadores en Equipo */
+.guest-avatar{background:linear-gradient(135deg,var(--butter),var(--gold))}
