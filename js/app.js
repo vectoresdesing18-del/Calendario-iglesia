@@ -312,28 +312,25 @@ function renderDashboardSeriesProgress() {
     return `<p class="muted">Aún no hay series bíblicas registradas.</p>`;
   }
 
-  return series.map((serie) => {
+  // Envolvemos todo en un grid contenedor
+  return `<div class="bento-grid">` + series.map((serie) => {
     const chapters = Math.max(1, Number(serie.chapters || 1));
     const done = Math.min(chapters, Math.max(0, Number(serie.done || 0)));
     const pct = seriesPercent(serie);
     const remaining = Math.max(0, chapters - done);
 
+    // Aquí usamos la estructura bento-card
     return `
-      <div class="series-progress-item">
-        <div class="series-progress-head">
-          <strong>${escapeHtml(serie.name)}</strong>
-          <span>${pct}%</span>
-        </div>
-        <div class="series-progress-bar">
-          <i style="width:${pct}%"></i>
-        </div>
-        <div class="series-progress-meta">
-          <span>${done} de ${chapters} completados</span>
-          <span>${remaining ? `Restan ${remaining}` : "Serie completada"}</span>
+      <div class="bento-card bg-blue">
+        <h4>${escapeHtml(serie.name)}</h4>
+        <div class="value">${done} / ${chapters}</div>
+        <p>${remaining ? `Restan ${remaining} estudios` : "¡Serie completada!"}</p>
+        <div class="series-progress-bar" style="margin-top: 10px; background: rgba(0,0,0,0.1);">
+          <i style="width:${pct}%; background: white;"></i>
         </div>
       </div>
     `;
-  }).join("");
+  }).join("") + `</div>`;
 }
 
 function nextEventForType(type) {
