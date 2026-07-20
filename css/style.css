@@ -951,26 +951,3 @@ tr:hover td{background:var(--surface2)}
 .inline-field{display:flex;gap:8px;margin-top:6px}
 .inline-field input{margin-top:0;flex:1}
 .inline-field .btn{margin-top:0;white-space:nowrap;flex:0 0 auto}
-
-
-/* Estilo base para las tarjetas tipo Bento */
-.bento-card {
-  padding: 20px;
-  border-radius: 24px;
-  color: #1a1a1a; /* Texto oscuro para buen contraste */
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-}
-
-/* Clases de colores vibrantes */
-.bg-yellow { background-color: #ffd666; }
-.bg-orange { background-color: #ff9f43; }
-.bg-purple { background-color: #c792ea; }
-.bg-green  { background-color: #a3e635; }
-.bg-blue   { background-color: #7dd3fc; }
-
-/* Ajustes de tipografía para este estilo */
-.bento-card h4 { font-size: 12px; text-transform: uppercase; margin-bottom: 10px; opacity: 0.8; }
-.bento-card .value { font-size: 28px; font-weight: 800; }
