@@ -312,25 +312,28 @@ function renderDashboardSeriesProgress() {
     return `<p class="muted">Aún no hay series bíblicas registradas.</p>`;
   }
 
-  // Envolvemos todo en un grid contenedor
-  return `<div class="bento-grid">` + series.map((serie) => {
+  return series.map((serie) => {
     const chapters = Math.max(1, Number(serie.chapters || 1));
     const done = Math.min(chapters, Math.max(0, Number(serie.done || 0)));
     const pct = seriesPercent(serie);
     const remaining = Math.max(0, chapters - done);
 
-    // Aquí usamos la estructura bento-card
     return `
-      <div class="bento-card bg-blue">
-        <h4>${escapeHtml(serie.name)}</h4>
-        <div class="value">${done} / ${chapters}</div>
-        <p>${remaining ? `Restan ${remaining} estudios` : "¡Serie completada!"}</p>
-        <div class="series-progress-bar" style="margin-top: 10px; background: rgba(0,0,0,0.1);">
-          <i style="width:${pct}%; background: white;"></i>
+      <div class="series-progress-item">
+        <div class="series-progress-head">
+          <strong>${escapeHtml(serie.name)}</strong>
+          <span>${pct}%</span>
+        </div>
+        <div class="series-progress-bar">
+          <i style="width:${pct}%"></i>
+        </div>
+        <div class="series-progress-meta">
+          <span>${done} de ${chapters} completados</span>
+          <span>${remaining ? `Restan ${remaining}` : "Serie completada"}</span>
         </div>
       </div>
     `;
-  }).join("") + `</div>`;
+  }).join("");
 }
 
 function nextEventForType(type) {
@@ -432,6 +435,128 @@ function renderMiniCalendar() {
   `;
 }
 
+
+function dashboardPersonCounts(field) {
+  const counts = {};
+  state.data.events.forEach((event) => {
+    const name = event[field];
+    if (name) counts[name] = (counts[name] || 0) + 1;
+  });
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+}
+
+function dashboardSeriesMetrics() {
+  const series = state.data.series || [];
+  const studied = series.filter((serie) => Number(serie.done || 0) > 0).length;
+  const completed = series.filter((serie) => seriesPercent(serie) >= 100).length;
+  const active = series.filter((serie) => seriesPercent(serie) < 100).length;
+  return { studied, completed, active, total: series.length };
+}
+
+function dashboardMiniCalendar() {
+  const firstDay = new Date(state.year, state.month, 1);
+  const daysInMonth = new Date(state.year, state.month + 1, 0).getDate();
+  const mondayOffset = (firstDay.getDay() + 6) % 7;
+  let cells = "";
+
+  for (let i = 0; i < mondayOffset; i++) {
+    cells += `<span class="v10-mini-day empty"></span>`;
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = `${state.year}-${pad(state.month + 1)}-${pad(day)}`;
+    const dayEvents = state.data.events.filter((event) => event.date === date);
+    const dots = dayEvents.slice(0, 3).map((event) => {
+      const cls = eventClass(event.type) || "default";
+      return `<i class="${cls}"></i>`;
+    }).join("");
+
+    cells += `
+      <button class="v10-mini-day ${date === today() ? "today" : ""}" data-action="event-new-date" data-date="${date}">
+        <span>${day}</span>
+        <small>${dots}</small>
+      </button>
+    `;
+  }
+
+  return `
+    <div class="v10-mini-calendar">
+      <div class="v10-mini-calendar-head">
+        <strong>${MONTHS[state.month]} ${state.year}</strong>
+        <div>
+          <button class="v10-mini-arrow" data-action="month-prev">‹</button>
+          <button class="v10-mini-arrow" data-action="month-next">›</button>
+        </div>
+      </div>
+      <div class="v10-mini-weekdays">
+        ${["LU", "MA", "MI", "JU", "VI", "SÁ", "DO"].map((day) => `<span>${day}</span>`).join("")}
+      </div>
+      <div class="v10-mini-days">${cells}</div>
+      <div class="v10-mini-legend">
+        <span><i class="default"></i> Reuniones</span>
+        <span><i class="estudio"></i> Estudios</span>
+        <span><i class="oracion"></i> Oración</span>
+      </div>
+    </div>
+  `;
+}
+
+function dashboardBooksPanel() {
+  const series = state.data.series || [];
+  if (!series.length) return `<p class="muted">Aún no hay libros registrados.</p>`;
+
+  return series.slice(0, 4).map((serie, index) => {
+    const chapters = Math.max(1, Number(serie.chapters || 1));
+    const done = Math.min(chapters, Math.max(0, Number(serie.done || 0)));
+    const pct = seriesPercent(serie);
+    const tones = ["violet", "green", "amber", "blue"];
+    return `
+      <div class="v10-book-row">
+        <span class="v10-book-icon ${tones[index % tones.length]}">▤</span>
+        <div class="v10-book-main">
+          <div class="v10-book-head">
+            <strong>${escapeHtml(serie.name)}</strong>
+            <b>${pct}%</b>
+          </div>
+          <div class="v10-book-track"><i class="${tones[index % tones.length]}" style="width:${pct}%"></i></div>
+          <small>${done} de ${chapters} capítulos</small>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function dashboardPendingItems() {
+  const future = futureEvents();
+  const items = [];
+
+  future.slice(0, 12).forEach((event) => {
+    if (!event.preacher && !event.guest) {
+      items.push(["red", "Confirmar predicador", `${fmt(event.date)} · ${event.type}`]);
+    }
+    if (!event.coordinator) {
+      items.push(["green", "Asignar coordinador", `${fmt(event.date)} · ${event.type}`]);
+    }
+    if (!event.passage) {
+      items.push(["amber", "Agregar pasaje bíblico", `${fmt(event.date)} · ${event.type}`]);
+    }
+  });
+
+  if (!items.length) {
+    items.push(["violet", "Planificación completa", "No hay datos pendientes"]);
+  }
+
+  return items.slice(0, 5).map(([tone, title, sub]) => `
+    <div class="v10-pending-item">
+      <span class="v10-pending-icon ${tone}">✓</span>
+      <div>
+        <strong>${escapeHtml(title)}</strong>
+        <small>${escapeHtml(sub)}</small>
+      </div>
+    </div>
+  `).join("");
+}
+
 function statusPills() {
   const session = state.authResolved
     ? state.user
@@ -478,31 +603,37 @@ function render() {
 }
 
 function renderTopbar() {
+  const displayName = state.user?.displayName || state.user?.email?.split("@")[0] || "Administrador";
+  const avatar = state.user?.photoURL
+    ? `<img src="${escapeHtml(state.user.photoURL)}" alt="">`
+    : `<span>${initials(displayName)}</span>`;
+
   return `
-    <header class="topbar">
-      <div class="brand">
+    <header class="topbar v10-topbar">
+      <div class="v10-mobile-brand">
         <div class="brand-mark">✝</div>
-        <div>
-          <h1>Planificación Litúrgica</h1>
-          <p>${escapeHtml(state.data.churchName || "Sistema ministerial")}</p>
-        </div>
+        <strong>Planificación Litúrgica</strong>
       </div>
 
-      <nav class="desktop-nav" aria-label="Navegación principal">
-        ${NAV.map(([id, icon, label]) => `
-          <button class="nav ${state.view === id ? "active" : ""}" data-view="${id}">
-            <span class="nav-icon">${icon}</span>${label}
-          </button>
-        `).join("")}
-      </nav>
+      <div class="v10-search">
+        <span>⌕</span>
+        <input type="search" placeholder="Buscar reuniones, personas, series..." aria-label="Buscar">
+      </div>
 
-      <div class="top-actions">
-        <button class="btn gold export-top-btn" data-action="export-month-image" title="Descargar imagen mensual">Imagen</button>
-        <button class="icon-btn" data-action="theme" title="Cambiar apariencia">${state.data.theme === "dark" ? "◐" : "◑"}</button>
+      <div class="top-actions v10-top-actions">
+        <button class="v10-round-btn" data-action="export-month-image" title="Descargar imagen mensual">⇩</button>
+        <button class="v10-round-btn" data-action="theme" title="Cambiar apariencia">${state.data.theme === "dark" ? "◐" : "◑"}</button>
+        <div class="v10-profile">
+          <div class="v10-avatar">${avatar}</div>
+          <div class="v10-profile-copy">
+            <strong>${escapeHtml(displayName)}</strong>
+            <small>${state.user ? "Administrador" : "Sin sesión"}</small>
+          </div>
+        </div>
         ${
           state.user
-            ? `<button class="btn ghost" data-action="logout">Salir</button>`
-            : `<button class="btn primary" data-action="login">Ingresar</button>`
+            ? `<button class="btn ghost small" data-action="logout">Salir</button>`
+            : `<button class="btn primary small" data-action="login">Ingresar</button>`
         }
       </div>
     </header>
@@ -510,7 +641,34 @@ function renderTopbar() {
 }
 
 function renderSidebar() {
-  return "";
+  return `
+    <aside class="sidebar v10-sidebar">
+      <div class="v10-side-brand">
+        <div class="v10-side-logo">✝</div>
+        <div>
+          <strong>Planificación</strong>
+          <span>Litúrgica</span>
+        </div>
+      </div>
+
+      <nav class="v10-side-nav" aria-label="Navegación principal">
+        ${NAV.map(([id, icon, label]) => `
+          <button class="nav ${state.view === id ? "active" : ""}" data-view="${id}">
+            <span class="nav-icon">${icon}</span>
+            <span>${label === "Inicio" ? "Dashboard" : label === "Config." ? "Configuración" : label}</span>
+          </button>
+        `).join("")}
+      </nav>
+
+      <div class="v10-side-footer">
+        <div class="v10-church-icon">⌂</div>
+        <div>
+          <strong>${escapeHtml(state.data.churchName || "Iglesia local")}</strong>
+          <span>Administrador</span>
+        </div>
+      </div>
+    </aside>
+  `;
 }
 
 function renderMobileTabs() {
@@ -550,119 +708,190 @@ function renderCurrentView() {
 }
 
 function renderDashboard() {
-  const events = sortedEvents();
   const future = futureEvents();
   const monthly = monthlyEvents();
-  const pending = events.filter((event) => !(event.preacher || event.guest) || !event.coordinator || !event.passage).length;
+  const next = future[0] || null;
+  const pendingCount = future.slice(0, 12).reduce((total, event) => {
+    return total
+      + (!event.preacher && !event.guest ? 1 : 0)
+      + (!event.coordinator ? 1 : 0)
+      + (!event.passage ? 1 : 0);
+  }, 0);
 
-  const alerts = [];
-  future.slice(0, 8).forEach((event) => {
-    if (!event.preacher && !event.guest) alerts.push(["err", `Falta predicador: ${fmt(event.date)} ${event.type}`]);
-    if (!event.coordinator) alerts.push(["warn", `Falta coordinador: ${fmt(event.date)} ${event.type}`]);
-    if (!event.passage) alerts.push(["warn", `Falta pasaje: ${fmt(event.date)} ${event.type}`]);
-  });
-  if (!alerts.length) alerts.push(["ok", "Todo listo en las próximas reuniones."]);
-
-  const schedules = state.data.settings.schedules || [];
-  const heroSchedules = [
-    ...schedules.filter((s) => s.day === 4),
-    ...schedules.filter((s) => s.day === 0)
-  ];
-  const otherSchedules = schedules.filter((s) => s.day !== 4 && s.day !== 0);
-
-  const colorClasses = ["sage", "pink", "butter", "lilac"];
-  const stats = seriesStats();
+  const preacherCounts = dashboardPersonCounts("preacher").slice(0, 5);
+  const coordinatorCounts = dashboardPersonCounts("coordinator");
+  const maxPreach = Math.max(1, ...preacherCounts.map(([, count]) => count));
+  const totalCoord = coordinatorCounts.reduce((sum, [, count]) => sum + count, 0);
+  const assignedCoord = state.data.events.filter((event) => event.coordinator).length;
+  const coordPct = state.data.events.length
+    ? Math.round((assignedCoord / state.data.events.length) * 100)
+    : 0;
+  const seriesMetric = dashboardSeriesMetrics();
+  const displayName = state.user?.displayName || state.user?.email?.split("@")[0] || "Administrador";
 
   return `
-    <section class="view dashboard-view">
-      <div class="welcome-head">
+    <section class="view dashboard-view v10-dashboard">
+      <div class="v10-welcome">
         <div>
-          <h1>Panel de planificación</h1>
-          <p>${escapeHtml(state.data.churchName || "Sistema ministerial")}</p>
+          <h1>Hola, ${escapeHtml(displayName)} <span>👋</span></h1>
+          <p>Centro de control ministerial</p>
         </div>
-        <button class="btn primary" data-action="event-new">＋ Reunión</button>
+        <button class="btn primary" data-action="event-new">＋ Nueva reunión</button>
       </div>
 
-      ${statusPills()}
-
-      <div class="dash-grid">
-        <div class="dash-col-main">
-          <h3 class="section-label">Reuniones principales <span>(${heroSchedules.length || schedules.length})</span></h3>
-          <div class="hero-row">
-            ${
-              heroSchedules.length
-                ? heroSchedules.map((s, i) => renderHeroMeetingCard(s, colorClasses[i % 4])).join("")
-                : schedules.length
-                  ? schedules.slice(0, 2).map((s, i) => renderHeroMeetingCard(s, colorClasses[i % 4])).join("")
-                  : `<p class="muted">Configura tus horarios semanales en Config. para verlos aquí.</p>`
-            }
+      <div class="v10-summary-grid">
+        <button class="v10-summary-card" data-action="${next ? "event-edit" : "event-new"}" ${next ? `data-id="${next.id}"` : ""}>
+          <span class="v10-summary-icon violet">▣</span>
+          <div>
+            <small>Próxima reunión</small>
+            <strong>${next ? `${fmt(next.date)} · ${escapeHtml(next.time || "")}` : "Sin reuniones"}</strong>
+            <em>${next ? escapeHtml(next.type) : "Crear reunión"}</em>
           </div>
+          <b>›</b>
+        </button>
 
-          <h3 class="section-label">Progreso de estudio bíblico</h3>
-          <div class="stat-pill-row">
-            <div class="stat-pill" style="background:var(--butter)">
-              <span>Capítulos completados</span>
-              <strong>${stats.doneChapters}</strong>
-            </div>
-            <div class="stat-pill" style="background:var(--pink)">
-              <span>Progreso promedio</span>
-              <strong>${stats.avgPct}%</strong>
-            </div>
-            <div class="stat-pill" style="background:var(--lilac)">
-              <span>Series activas</span>
-              <strong>${stats.active}</strong>
-            </div>
+        <button class="v10-summary-card" data-view="events">
+          <span class="v10-summary-icon blue">♙</span>
+          <div>
+            <small>Reuniones del mes</small>
+            <strong>${monthly.length}</strong>
+            <em>Programadas</em>
           </div>
+          <b>›</b>
+        </button>
 
-          ${
-            stats.feature
-              ? `<div class="series-feature">
-                  <div class="series-feature-head">
-                    <span>📖 Estudio actual</span>
-                    <small>${Math.min(Number(stats.feature.chapters || 0), Math.max(0, Number(stats.feature.done || 0)))}/${stats.feature.chapters} capítulos</small>
-                  </div>
-                  <strong>${escapeHtml(stats.feature.name)}</strong>
-                  <div class="series-feature-bar"><i style="width:${seriesPercent(stats.feature)}%"></i></div>
-                </div>`
-              : `<p class="muted">Aún no hay series bíblicas registradas.</p>`
-          }
+        <button class="v10-summary-card" data-view="series">
+          <span class="v10-summary-icon green">▤</span>
+          <div>
+            <small>Series activas</small>
+            <strong>${seriesMetric.active}</strong>
+            <em>En progreso</em>
+          </div>
+          <b>›</b>
+        </button>
 
-          ${stats.count > 1 ? `<div class="series-mini-list">${renderDashboardSeriesProgress()}</div>` : ""}
+        <button class="v10-summary-card" data-view="series">
+          <span class="v10-summary-icon amber">▥</span>
+          <div>
+            <small>Libros estudiados</small>
+            <strong>${seriesMetric.studied}</strong>
+            <em>${seriesMetric.completed} completados</em>
+          </div>
+          <b>›</b>
+        </button>
+      </div>
+
+      <div class="v10-dashboard-grid">
+        <div class="v10-left-column">
+          <section class="v10-panel v10-events-panel">
+            <div class="v10-panel-head">
+              <div>
+                <span class="v10-panel-icon">▣</span>
+                <h2>Próximos eventos</h2>
+              </div>
+              <button class="v10-soft-btn" data-view="calendar">Ver calendario</button>
+            </div>
+
+            <div class="v10-event-header">
+              <span>Fecha</span><span>Hora</span><span>Tipo</span><span>Predicador</span><span>Coordinador</span><span>Pasaje bíblico</span>
+            </div>
+
+            <div class="v10-event-list">
+              ${
+                future.length
+                  ? future.slice(0, 5).map((event) => {
+                      const [year, month, day] = event.date.split("-").map(Number);
+                      return `
+                        <button class="v10-event-row" data-action="event-edit" data-id="${event.id}">
+                          <span class="v10-event-date"><small>${MONTHS[month - 1].slice(0, 3).toUpperCase()}</small><b>${pad(day)}</b></span>
+                          <span class="v10-event-time"><b>${escapeHtml(event.time || "—")}</b><small>hrs.</small></span>
+                          <span><em class="v10-type-pill ${eventClass(event.type)}">${escapeHtml(event.type)}</em></span>
+                          <span class="v10-person-cell"><i>${initials(event.preacher || event.guest || "?")}</i>${escapeHtml(event.preacher || event.guest || "Pendiente")}</span>
+                          <span class="v10-person-cell"><i>${initials(event.coordinator || "?")}</i>${escapeHtml(event.coordinator || "Pendiente")}</span>
+                          <span class="v10-passage">${escapeHtml(event.passage || "Sin pasaje")}</span>
+                        </button>
+                      `;
+                    }).join("")
+                  : `<div class="v10-empty">No hay próximos eventos.</div>`
+              }
+            </div>
+
+            <button class="v10-bottom-link" data-view="events">Ver todos los eventos <span>›</span></button>
+          </section>
+
+          <section class="v10-panel v10-overview-panel">
+            <div class="v10-panel-head">
+              <div><h2>Resumen general</h2></div>
+            </div>
+            <div class="v10-overview-grid">
+              <div><span class="violet">♙</span><strong>${state.data.people.length}</strong><small>Integrantes del equipo</small></div>
+              <div><span class="green">↗</span><strong>${monthly.length}</strong><small>Reuniones este mes</small></div>
+              <div><span class="amber">◷</span><strong>${state.data.series.length}</strong><small>Libros registrados</small></div>
+              <div><span class="blue">＋</span><strong>${state.data.guests.length}</strong><small>Invitados guardados</small></div>
+            </div>
+          </section>
         </div>
 
-        <div class="dash-col-side">
-          <h3 class="section-label">Calendario</h3>
-          ${renderMiniCalendar()}
+        <div class="v10-right-column">
+          <section class="v10-panel v10-workload">
+            <div class="v10-panel-head">
+              <div><h2>Carga ministerial</h2></div>
+            </div>
 
-          <h3 class="section-label">Próximas reuniones</h3>
-          <div class="schedule-mini-list">
-            ${
-              future.length
-                ? future.slice(0, 4).map((event) => `
-                    <button class="schedule-mini-item" data-action="event-edit" data-id="${event.id}">
-                      <span class="schedule-mini-icon">${TYPE_ICON[event.type] || "📌"}</span>
-                      <span class="schedule-mini-text">
-                        <strong>${escapeHtml(event.type)}</strong>
-                        <small>${fmt(event.date)} · ${escapeHtml(event.time || "")}</small>
-                      </span>
-                    </button>
-                  `).join("")
-                : `<p class="muted">No hay próximas reuniones generadas.</p>`
-            }
-            ${otherSchedules.length ? otherSchedules.map((s) => `
-              <div class="schedule-mini-item template">
-                <span class="schedule-mini-icon">${TYPE_ICON[s.type] || "📌"}</span>
-                <span class="schedule-mini-text">
-                  <strong>${escapeHtml(s.type)}</strong>
-                  <small>${DAYS[s.day]} · ${s.time}</small>
-                </span>
+            <div class="v10-workload-grid">
+              <div class="v10-bars-area">
+                <h3>Predicaciones por persona</h3>
+                <div class="v10-bars">
+                  ${
+                    preacherCounts.length
+                      ? preacherCounts.map(([name, count]) => `
+                          <div class="v10-bar-item">
+                            <div class="v10-bar-wrap">
+                              <b>${count}</b>
+                              <i style="height:${Math.max(18, Math.round((count / maxPreach) * 118))}px"></i>
+                            </div>
+                            <span>${escapeHtml(name.split(" ").slice(0, 2).join(" "))}</span>
+                          </div>
+                        `).join("")
+                      : `<p class="muted">Sin predicaciones registradas.</p>`
+                  }
+                </div>
               </div>
-            `).join("") : ""}
-          </div>
 
-          <h3 class="section-label">Alertas <small>(${monthly.length} este mes · ${pending} pendientes)</small></h3>
-          <div class="alerts">
-            ${alerts.slice(0, 4).map(([level, text]) => `<div class="alert ${level}">${escapeHtml(text)}</div>`).join("")}
+              <div class="v10-donut-area">
+                <h3>Coordinaciones</h3>
+                <div class="v10-donut" style="--value:${coordPct}">
+                  <div><strong>${coordPct}%</strong><span>Asignadas</span></div>
+                </div>
+                <div class="v10-donut-legend">
+                  <span><i></i> Asignadas (${assignedCoord})</span>
+                  <span><i></i> Pendientes (${Math.max(0, state.data.events.length - assignedCoord)})</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div class="v10-bottom-widgets">
+            <section class="v10-panel v10-calendar-widget">
+              ${dashboardMiniCalendar()}
+            </section>
+
+            <section class="v10-panel v10-books-widget">
+              <div class="v10-panel-head">
+                <div><h2>Métrica de libros estudiados</h2></div>
+              </div>
+              <div class="v10-books-list">${dashboardBooksPanel()}</div>
+              <button class="v10-bottom-link" data-view="series">Ver todos los libros <span>›</span></button>
+            </section>
+
+            <section class="v10-panel v10-pending-widget">
+              <div class="v10-panel-head">
+                <div><h2>Pendientes</h2></div>
+                <span class="v10-count-badge">${pendingCount}</span>
+              </div>
+              <div class="v10-pending-list">${dashboardPendingItems()}</div>
+              <button class="v10-bottom-link" data-view="events">Ver todos <span>›</span></button>
+            </section>
           </div>
         </div>
       </div>

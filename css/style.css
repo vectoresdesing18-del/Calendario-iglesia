@@ -951,26 +951,3 @@ tr:hover td{background:var(--surface2)}
 .inline-field{display:flex;gap:8px;margin-top:6px}
 .inline-field input{margin-top:0;flex:1}
 .inline-field .btn{margin-top:0;white-space:nowrap;flex:0 0 auto}
-
-/* --- Estilos Bento Grid --- */
-.bento-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
-  margin-top: 16px;
-}
-.bento-card {
-  padding: 18px;
-  border-radius: 20px;
-  color: #1a1a1a;
-  display: flex;
-  flex-direction: column;
-}
-.bento-card h4 { font-size: 10px; text-transform: uppercase; margin-bottom: 8px; opacity: 0.7; font-weight: 900; }
-.bento-card .value { font-size: 24px; font-weight: 800; line-height: 1; }
-.bento-card p { font-size: 11px; margin-top: 4px; opacity: 0.8; }
-.bg-yellow { background-color: #ffd666; }
-.bg-orange { background-color: #ff9f43; }
-.bg-purple { background-color: #c792ea; }
-.bg-green  { background-color: #a3e635; }
-.bg-blue   { background-color: #7dd3fc; }

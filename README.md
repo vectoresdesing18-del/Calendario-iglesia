@@ -1,41 +1,27 @@
-# Planificación Litúrgica V9.0 — Ethereal Midnight
+# Planificación Litúrgica V10.0 — Ministry Dashboard
 
-Rediseño visual completo de la aplicación ministerial, inspirado en dashboards fintech oscuros y premium.
+Rediseño visual aprobado para el dashboard principal, construido sobre la versión V9.0 Ethereal.
 
-## Cambios visuales V9.0
+## Conserva
+- Firebase Authentication
+- Firestore y sincronización entre dispositivos
+- Google Calendar
+- Reuniones, equipo, invitados y series
+- Generación mensual
+- Exportación PNG para WhatsApp
+- Backup JSON
+- PWA
 
-- Contenedor principal oscuro con marco translúcido y fondo ambiental lavanda/azul.
-- Navegación superior central tipo cápsula.
-- Dashboard, calendario, tablas, tarjetas, formularios, ajustes y modales unificados bajo el mismo sistema visual.
-- Tarjetas principales con gradientes menta, lima, coral, violeta y superficies oscuras.
-- Diseño adaptable para PC, tablet y celular.
-- Navegación móvil completa con acceso a todas las secciones.
-- Nueva hoja visual independiente: `css/ethereal.css`.
+## Nuevo Dashboard
+- Sidebar profesional
+- Encabezado con búsqueda y perfil
+- Próximos eventos
+- Gráficos CSS de carga ministerial
+- Mini calendario mensual interactivo
+- Métrica visual de libros estudiados
+- Panel de pendientes
+- Diseño responsive
 
-## Funciones conservadas
+Subir el contenido de este ZIP a la raíz del repositorio y abrir:
 
-- Inicio de sesión con Google y Firebase.
-- Sincronización de datos entre dispositivos.
-- Generación automática de reuniones.
-- Calendario mensual.
-- Equipo, invitados y series bíblicas.
-- Google Calendar.
-- Respaldo JSON.
-- Descarga de imagen mensual para WhatsApp.
-- PWA instalable.
-
-## Publicar en GitHub Pages
-
-1. Descomprime el ZIP.
-2. En tu repositorio, reemplaza los archivos anteriores por el contenido de la carpeta.
-3. Confirma los cambios en GitHub.
-4. Espera la actualización de GitHub Pages.
-5. Abre la web una vez con `?v=9.0` al final de la dirección.
-
-Ejemplo:
-
-```text
-https://TU-USUARIO.github.io/TU-REPOSITORIO/?v=9.0
-```
-
-La caché del Service Worker fue actualizada a `liturgica-v9-ethereal-shell`.
+`https://vectoresdesing18-del.github.io/Calendario-iglesia/?v=10.0`
