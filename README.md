@@ -1,10 +1,22 @@
-# Planificación Litúrgica V10.1 — Series de Estudio
+# Planificación Litúrgica V11.0 — Centro de Enseñanza
 
-Incluye mapa visual del libro, línea de tiempo de pasajes, próxima predicación sugerida,
-estadísticas, reuniones vinculadas y área visual de recursos.
+Primera versión del ecosistema de preparación bíblica.
 
-Conserva Firebase, Firestore, Google Calendar, reuniones, equipo, invitados,
-exportación mensual y PWA.
+## Nuevo
+- Estructura literaria del libro.
+- Unidades temáticas con estados de avance.
+- Acceso al centro de preparación desde cada pasaje.
+- Campos de Observación, Interpretación y Aplicación.
+- Bosquejo del mensaje.
+- Guía del profesor.
+- Material para estudiantes.
+- Enlace de video.
+- Recursos e integración conceptual con InkFaith.
+- Guardado de la preparación dentro de cada serie en Firestore.
 
-Abrir después de publicar:
-https://vectoresdesing18-del.github.io/Calendario-iglesia/?v=10.1
+## Conserva
+Todas las funciones de V10.1: Dashboard, calendario, reuniones, equipo,
+invitados, series, Google Calendar, exportación y PWA.
+
+Publicación:
+https://vectoresdesing18-del.github.io/Calendario-iglesia/?v=11.0

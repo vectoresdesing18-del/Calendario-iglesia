@@ -93,8 +93,8 @@ function createDefaults() {
     ],
     guests: [],
     series: [
-      { id: uid(), name: "Hebreos", chapters: 13, done: 0, pericopeIndex: 0, notes: "" },
-      { id: uid(), name: "2 Pedro", chapters: 3, done: 0, pericopeIndex: 0, notes: "" }
+      { id: uid(), name: "Hebreos", chapters: 13, done: 0, pericopeIndex: 0, passageNotes: {}, notes: "" },
+      { id: uid(), name: "2 Pedro", chapters: 3, done: 0, pericopeIndex: 0, passageNotes: {}, notes: "" }
     ]
   };
 }
@@ -147,7 +147,7 @@ function mergeData(defaultsData, incomingData = {}) {
     events: incomingData.events || [],
     guests: incomingData.guests || [],
     series: (incomingData.series?.length ? incomingData.series : defaultsData.series)
-      .map((serie) => ({ pericopeIndex: 0, ...serie }))
+      .map((serie) => ({ pericopeIndex: 0, passageNotes: {}, ...serie }))
   };
 }
 
@@ -1103,6 +1103,137 @@ function renderGuestsView() {
   `;
 }
 
+
+function literaryStructureFor(serie) {
+  const name = String(serie?.name || "").toLowerCase();
+
+  if (name.includes("hebreos")) {
+    return [
+      { title: "El Hijo: revelación suprema de Dios", range: "Hebreos 1:1–4", chapters: [1] },
+      { title: "Cristo superior a los ángeles", range: "Hebreos 1:5–2:18", chapters: [1, 2] },
+      { title: "Cristo superior a Moisés", range: "Hebreos 3:1–4:13", chapters: [3, 4] },
+      { title: "El gran Sumo Sacerdote", range: "Hebreos 4:14–7:28", chapters: [4, 5, 6, 7] },
+      { title: "El nuevo y mejor pacto", range: "Hebreos 8:1–10:18", chapters: [8, 9, 10] },
+      { title: "Perseverar por la fe", range: "Hebreos 10:19–12:29", chapters: [10, 11, 12] },
+      { title: "Exhortaciones finales", range: "Hebreos 13", chapters: [13] }
+    ];
+  }
+
+  if (name.includes("2 pedro")) {
+    return [
+      { title: "Crecer en el conocimiento de Cristo", range: "2 Pedro 1:1–11", chapters: [1] },
+      { title: "La Palabra profética segura", range: "2 Pedro 1:12–21", chapters: [1] },
+      { title: "Advertencia contra falsos maestros", range: "2 Pedro 2", chapters: [2] },
+      { title: "La venida del Señor", range: "2 Pedro 3:1–13", chapters: [3] },
+      { title: "Crecer en gracia", range: "2 Pedro 3:14–18", chapters: [3] }
+    ];
+  }
+
+  const chapters = Math.max(1, Number(serie?.chapters || 1));
+  return Array.from({ length: chapters }, (_, index) => ({
+    title: `Capítulo ${index + 1}`,
+    range: `${serie.name} ${index + 1}`,
+    chapters: [index + 1]
+  }));
+}
+
+function passageWorkspaceData(serie, ref) {
+  return serie?.passageNotes?.[ref] || {
+    observation: "",
+    interpretation: "",
+    application: "",
+    outline: "",
+    teacherGuide: "",
+    studentMaterial: "",
+    videoUrl: "",
+    resources: ""
+  };
+}
+
+function renderPassageWorkspaceModal() {
+  const serie = state.data.series.find((item) => item.id === state.modal.seriesId);
+  if (!serie) return "";
+
+  const ref = state.modal.ref || "";
+  const title = state.modal.title || "Pasaje de la serie";
+  const notes = passageWorkspaceData(serie, ref);
+
+  return `
+    <div class="modal-wrap v11-workspace-wrap">
+      <div class="modal v11-workspace-modal">
+        <header>
+          <div>
+            <small>${escapeHtml(serie.name)}</small>
+            <h3>${escapeHtml(ref)}</h3>
+            <p>${escapeHtml(title)}</p>
+          </div>
+          <button class="close" data-action="modal-close">×</button>
+        </header>
+
+        <div class="v11-workspace-intro">
+          <span>📖</span>
+          <div>
+            <strong>Centro de preparación bíblica</strong>
+            <small>Organiza el estudio, el bosquejo y los materiales vinculados con este pasaje.</small>
+          </div>
+        </div>
+
+        <div class="v11-study-grid">
+          <label>
+            <span>👀 Observación</span>
+            <textarea id="passageObservation" rows="5" placeholder="¿Qué dice el texto? Personas, verbos, conectores, repeticiones y estructura.">${escapeHtml(notes.observation)}</textarea>
+          </label>
+
+          <label>
+            <span>🧠 Interpretación</span>
+            <textarea id="passageInterpretation" rows="5" placeholder="¿Qué quiso comunicar el autor a sus primeros lectores?">${escapeHtml(notes.interpretation)}</textarea>
+          </label>
+
+          <label>
+            <span>❤️ Aplicación</span>
+            <textarea id="passageApplication" rows="5" placeholder="¿Cómo debe responder la iglesia a esta verdad?">${escapeHtml(notes.application)}</textarea>
+          </label>
+
+          <label>
+            <span>📝 Bosquejo</span>
+            <textarea id="passageOutline" rows="5" placeholder="Idea central, divisiones y énfasis del mensaje.">${escapeHtml(notes.outline)}</textarea>
+          </label>
+
+          <label>
+            <span>👨‍🏫 Guía del profesor</span>
+            <textarea id="passageTeacherGuide" rows="4" placeholder="Preguntas, explicaciones y dinámica de la clase.">${escapeHtml(notes.teacherGuide)}</textarea>
+          </label>
+
+          <label>
+            <span>🖨 Material para estudiantes</span>
+            <textarea id="passageStudentMaterial" rows="4" placeholder="Contenido para la hoja de trabajo o guía imprimible.">${escapeHtml(notes.studentMaterial)}</textarea>
+          </label>
+
+          <label class="full">
+            <span>🎥 Enlace de la predicación</span>
+            <input id="passageVideoUrl" type="url" value="${escapeHtml(notes.videoUrl)}" placeholder="YouTube, Drive u otro enlace">
+          </label>
+
+          <label class="full">
+            <span>📚 Recursos e InkFaith</span>
+            <textarea id="passageResources" rows="3" placeholder="Libros, PDFs, presentaciones, guías InkFaith y otros recursos.">${escapeHtml(notes.resources)}</textarea>
+          </label>
+        </div>
+
+        <footer class="right">
+          <button class="btn ghost" data-action="modal-close">Cancelar</button>
+          <button
+            class="btn primary"
+            data-action="passage-save"
+            data-series-id="${serie.id}"
+            data-ref="${escapeHtml(ref)}"
+          >Guardar preparación</button>
+        </footer>
+      </div>
+    </div>
+  `;
+}
+
 function renderSeriesView() {
   const series = state.data.series || [];
 
@@ -1163,7 +1294,7 @@ function renderSeriesView() {
           String(linked.passage || "").replace(/\s/g, "") === String(item.ref || "").replace(/\s/g, "")
         );
         return `
-          <div class="v101-timeline-item ${status}">
+          <button class="v101-timeline-item ${status}" data-action="passage-open" data-series-id="${selected.id}" data-ref="${escapeHtml(item.ref)}" data-title="${escapeHtml(item.title || "Pasaje de la serie")}">
             <span class="v101-timeline-dot">${status === "done" ? "✓" : status === "active" ? "" : ""}</span>
             <div class="v101-timeline-copy">
               <strong>${escapeHtml(item.ref)}</strong>
@@ -1173,7 +1304,7 @@ function renderSeriesView() {
               <span>${event ? fmt(event.date) : status === "done" ? "Completado" : "Por programar"}</span>
               <b>${escapeHtml(event?.preacher || event?.guest || "Por asignar")}</b>
             </div>
-          </div>
+          </button>
         `;
       }).join("")
     : `
@@ -1256,6 +1387,38 @@ function renderSeriesView() {
               <i style="width:${pct}%"></i>
             </div>
             <small>${done} de ${chapters} capítulos completados</small>
+          </section>
+
+          <section class="v101-panel v11-structure-panel">
+            <div class="v101-panel-head">
+              <div>
+                <h2>Estructura del libro</h2>
+                <p>Sigue el argumento y las unidades literarias, no solo los capítulos.</p>
+              </div>
+            </div>
+            <div class="v11-structure-list">
+              ${literaryStructureFor(selected).map((unit, index) => {
+                const maxChapter = Math.max(...unit.chapters);
+                const minChapter = Math.min(...unit.chapters);
+                const status = maxChapter <= done ? "done" : minChapter <= done + 1 ? "active" : "pending";
+                return `
+                  <button
+                    class="v11-structure-item ${status}"
+                    data-action="passage-open"
+                    data-series-id="${selected.id}"
+                    data-ref="${escapeHtml(unit.range)}"
+                    data-title="${escapeHtml(unit.title)}"
+                  >
+                    <span>${status === "done" ? "✓" : status === "active" ? "◷" : index + 1}</span>
+                    <div>
+                      <strong>${escapeHtml(unit.title)}</strong>
+                      <small>${escapeHtml(unit.range)}</small>
+                    </div>
+                    <b>›</b>
+                  </button>
+                `;
+              }).join("")}
+            </div>
           </section>
 
           <div class="v101-content-grid">
@@ -1457,6 +1620,7 @@ function renderModal() {
   if (state.modal.type === "person") return renderPersonModal();
   if (state.modal.type === "guest") return renderGuestModal();
   if (state.modal.type === "series") return renderSeriesModal();
+  if (state.modal.type === "passage") return renderPassageWorkspaceModal();
 
   return "";
 }
@@ -1809,6 +1973,45 @@ document.addEventListener("click", async (event) => {
     if (action === "guest-edit") openModal("guest", { id });
     if (action === "guest-save") await saveGuest(id);
     if (action === "guest-delete") await deleteGuest(id);
+
+    if (action === "passage-open") {
+      openModal("passage", {
+        seriesId: target.dataset.seriesId,
+        ref: target.dataset.ref || "",
+        title: target.dataset.title || ""
+      });
+    }
+
+    if (action === "passage-save") {
+      const seriesId = target.dataset.seriesId;
+      const ref = target.dataset.ref || "";
+      const passageData = {
+        observation: $("#passageObservation")?.value.trim() || "",
+        interpretation: $("#passageInterpretation")?.value.trim() || "",
+        application: $("#passageApplication")?.value.trim() || "",
+        outline: $("#passageOutline")?.value.trim() || "",
+        teacherGuide: $("#passageTeacherGuide")?.value.trim() || "",
+        studentMaterial: $("#passageStudentMaterial")?.value.trim() || "",
+        videoUrl: $("#passageVideoUrl")?.value.trim() || "",
+        resources: $("#passageResources")?.value.trim() || ""
+      };
+
+      const series = state.data.series.map((serie) =>
+        serie.id === seriesId
+          ? {
+              ...serie,
+              passageNotes: {
+                ...(serie.passageNotes || {}),
+                [ref]: passageData
+              }
+            }
+          : serie
+      );
+
+      await setData((data) => ({ ...data, series }));
+      closeModal();
+      showToast("Preparación bíblica guardada.");
+    }
 
     if (action === "series-open") {
       state.selectedSeriesId = id;
