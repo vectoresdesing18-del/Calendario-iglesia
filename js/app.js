@@ -422,7 +422,7 @@ function renderMiniCalendar() {
   return `
     <div class="mini-cal">
       <div class="mini-cal-head">
-        <strong>${MONTHS[state.month]} ${state.year}</strong>
+        <strong class="v12-current-month">${MONTHS[state.month]} ${state.year}</strong>
         <div class="mini-cal-nav">
           <button data-action="month-prev">‹</button>
           <button data-action="month-next">›</button>
@@ -685,13 +685,25 @@ function renderMobileTabs() {
 }
 
 function pageHead(title, subtitle, actions = "") {
+  const meta = {
+    "Calendario": ["▦", "PLANIFICACIÓN MENSUAL"],
+    "Reuniones": ["▣", "SERVICIOS Y RESPONSABLES"],
+    "Equipo": ["♙", "DISTRIBUCIÓN MINISTERIAL"],
+    "Invitados": ["✦", "PASTORES Y COLABORADORES"],
+    "Configuración": ["⚙", "AJUSTES DEL SISTEMA"]
+  }[title] || ["✦", "PLANIFICACIÓN LITÚRGICA"];
+
   return `
-    <div class="page-head">
-      <div>
-        <h2>${title}</h2>
-        <p>${subtitle}</p>
+    <div class="page-head v12-page-head">
+      <div class="v12-page-title">
+        <span class="v12-page-icon">${meta[0]}</span>
+        <div>
+          <small>${meta[1]}</small>
+          <h2>${title}</h2>
+          <p>${subtitle}</p>
+        </div>
       </div>
-      <div class="inline">${actions}</div>
+      <div class="inline v12-page-actions">${actions}</div>
     </div>
   `;
 }
@@ -926,7 +938,7 @@ function renderCalendarView() {
   }
 
   return `
-    <section class="view">
+    <section class="view v12-standard-view v12-calendar-view">
       ${pageHead(
         "Calendario",
         "Vista mensual con generación automática.",
@@ -954,7 +966,7 @@ function renderEventsView() {
   const rows = sortedEvents();
 
   return `
-    <section class="view">
+    <section class="view v12-standard-view v12-events-view">
       ${pageHead(
         "Reuniones",
         "Listado completo de reuniones.",
@@ -986,7 +998,7 @@ function renderEventsView() {
                     <tr>
                       <td><strong>${fmt(event.date)}</strong></td>
                       <td>${escapeHtml(event.time || "—")}</td>
-                      <td><span class="badge">${escapeHtml(event.type)}</span></td>
+                      <td><span class="badge v12-type-badge ${eventClass(event.type)}">${escapeHtml(event.type)}</span></td>
                       <td>${escapeHtml(event.preacher || "—")}</td>
                       <td>${escapeHtml(event.coordinator || "—")}</td>
                       <td>${escapeHtml(event.passage || "—")}</td>
@@ -1001,7 +1013,7 @@ function renderEventsView() {
                       <td><button class="action" data-action="event-edit" data-id="${event.id}">✏️</button></td>
                     </tr>
                   `).join("")
-                : `<tr><td colspan="9">Sin reuniones.</td></tr>`
+                : `<tr><td colspan="9"><div class="v12-empty-state"><span>▣</span><strong>No hay reuniones registradas</strong><small>Crea una reunión para comenzar la planificación.</small><button class="btn primary" data-action="event-new">＋ Nueva reunión</button></div></td></tr>`
             }
           </tbody>
         </table>
@@ -1012,7 +1024,7 @@ function renderEventsView() {
 
 function renderPeopleView() {
   return `
-    <section class="view">
+    <section class="view v12-standard-view v12-people-view">
       ${pageHead(
         "Equipo",
         "Predicadores, coordinadores e invitados que predican.",
@@ -1028,8 +1040,8 @@ function renderPeopleView() {
           const coordCount = state.data.events.filter((event) => event.coordinator === person.name).length;
 
           return `
-            <article class="info-card editable-card">
-              <div class="avatar">${initials(person.name)}</div>
+            <article class="info-card editable-card v12-person-card">
+              <div class="v12-card-top"><div class="avatar">${initials(person.name)}</div><span class="v12-card-status">Equipo</span></div>
               <h3>${escapeHtml(person.name)}</h3>
               <p>${escapeHtml(person.role)}</p>
               <p>${escapeHtml(person.email || "Sin correo")}</p>
@@ -1050,8 +1062,8 @@ function renderPeopleView() {
           const preachCount = state.data.events.filter((event) => event.guest === guest.name).length;
 
           return `
-            <article class="info-card editable-card">
-              <div class="avatar guest-avatar">${initials(guest.name)}</div>
+            <article class="info-card editable-card v12-person-card">
+              <div class="v12-card-top"><div class="avatar guest-avatar">${initials(guest.name)}</div><span class="v12-card-status guest">Invitado</span></div>
               <h3>${escapeHtml(guest.name)} <span class="badge gold">Invitado</span></h3>
               <p>${escapeHtml(guest.church || "Sin referencia")}</p>
               <p>${escapeHtml(guest.email || "Sin correo")}</p>
@@ -1073,7 +1085,7 @@ function renderPeopleView() {
 
 function renderGuestsView() {
   return `
-    <section class="view">
+    <section class="view v12-standard-view v12-guests-view">
       ${pageHead(
         "Invitados",
         "Predicadores invitados, iglesias y notas.",
@@ -1084,7 +1096,7 @@ function renderGuestsView() {
         ${
           state.data.guests.length
             ? state.data.guests.map((guest) => `
-                <article class="info-card editable-card">
+                <article class="info-card editable-card v12-person-card v12-guest-card">
                   <div class="avatar">${initials(guest.name)}</div>
                   <h3>${escapeHtml(guest.name)}</h3>
                   <p>${escapeHtml(guest.church || "Sin referencia")}</p>
@@ -1525,12 +1537,12 @@ function renderSeriesView() {
 
 function renderSettingsView() {
   return `
-    <section class="view">
+    <section class="view v12-standard-view v12-settings-view">
       ${pageHead("Configuración", "Horarios, sincronización y respaldo.")}
 
       <div class="settings-grid">
         <section class="panel">
-          <h3>Datos de iglesia</h3>
+          <div class="v12-settings-title"><span>⌂</span><div><h3>Datos de iglesia</h3><small>Identidad principal</small></div></div>
           <label class="full" style="display:block;margin-top:12px">
             Nombre de la iglesia
             <input id="churchNameInput" value="${escapeHtml(state.data.churchName || "")}" style="width:100%;margin-top:6px;border:1px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:13px;padding:11px">
@@ -1539,7 +1551,7 @@ function renderSettingsView() {
         </section>
 
         <section class="panel">
-          <h3>Horarios por defecto</h3>
+          <div class="v12-settings-title"><span>◷</span><div><h3>Horarios por defecto</h3><small>Automatización mensual</small></div></div>
           <p class="muted">Estos horarios se usan al generar el mes.</p>
 
           <div class="schedule-list">
@@ -1587,13 +1599,13 @@ function renderSettingsView() {
         </section>
 
         <section class="panel">
-          <h3>Google Calendar</h3>
+          <div class="v12-settings-title"><span>▦</span><div><h3>Google Calendar</h3><small>Sincronización externa</small></div></div>
           <p class="muted">Crea eventos con recordatorio por correo 1 día antes y notificación 1 hora antes.</p>
           <button class="btn secondary" data-action="calendar-connect">Conectar Calendar</button>
         </section>
 
         <section class="panel">
-          <h3>Respaldo</h3>
+          <div class="v12-settings-title"><span>⇩</span><div><h3>Respaldo</h3><small>Protección de datos</small></div></div>
           <div class="inline" style="margin-top:10px">
             <button class="btn ghost" data-action="backup-export">Exportar JSON</button>
             <label class="btn ghost">

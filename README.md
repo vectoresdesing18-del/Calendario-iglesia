@@ -1,22 +1,32 @@
-# Planificación Litúrgica V11.0 — Centro de Enseñanza
+# Planificación Litúrgica V12.0 — Experiencia Unificada
 
-Primera versión del ecosistema de preparación bíblica.
+La V12 unifica visualmente toda la aplicación bajo el mismo sistema de diseño.
 
-## Nuevo
-- Estructura literaria del libro.
-- Unidades temáticas con estados de avance.
-- Acceso al centro de preparación desde cada pasaje.
-- Campos de Observación, Interpretación y Aplicación.
-- Bosquejo del mensaje.
-- Guía del profesor.
-- Material para estudiantes.
-- Enlace de video.
-- Recursos e integración conceptual con InkFaith.
-- Guardado de la preparación dentro de cada serie en Firestore.
+## Áreas rediseñadas
+- Dashboard
+- Calendario mensual
+- Reuniones
+- Equipo
+- Invitados
+- Series de estudio
+- Centro de enseñanza
+- Configuración
+- Formularios y ventanas modales
+- Experiencia móvil
+
+## Mejoras de consistencia
+- Encabezados contextuales.
+- Jerarquía tipográfica común.
+- Tarjetas, bordes, sombras y espaciados coherentes.
+- Tablas y estados vacíos modernizados.
+- Formularios y botones normalizados.
+- Colores ministeriales consistentes.
+- Transiciones sutiles.
+- Responsive unificado.
 
 ## Conserva
-Todas las funciones de V10.1: Dashboard, calendario, reuniones, equipo,
-invitados, series, Google Calendar, exportación y PWA.
+Firebase, Firestore, Google Calendar, exportación mensual, PWA,
+datos existentes y todas las funciones de V11.
 
 Publicación:
-https://vectoresdesing18-del.github.io/Calendario-iglesia/?v=11.0
+https://vectoresdesing18-del.github.io/Calendario-iglesia/?v=12.0
