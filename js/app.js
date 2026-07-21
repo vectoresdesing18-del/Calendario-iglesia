@@ -63,6 +63,7 @@ const state = {
   toast: "",
   year: new Date().getFullYear(),
   month: new Date().getMonth(),
+  selectedSeriesId: null,
   data: createDefaults()
 };
 
@@ -1103,48 +1104,257 @@ function renderGuestsView() {
 }
 
 function renderSeriesView() {
+  const series = state.data.series || [];
+
+  if (!series.length) {
+    return `
+      <section class="view">
+        ${pageHead(
+          "Series de estudio",
+          "Planifica y conserva el avance de la enseñanza bíblica.",
+          `<button class="btn primary" data-action="series-new">＋ Nueva serie</button>`
+        )}
+        <section class="v101-empty-series">
+          <span>📖</span>
+          <h2>Crea tu primera serie de estudio</h2>
+          <p>Registra un libro bíblico, su avance, próximos pasajes y reuniones relacionadas.</p>
+          <button class="btn primary" data-action="series-new">Crear serie</button>
+        </section>
+      </section>
+    `;
+  }
+
+  const selected =
+    series.find((item) => item.id === state.selectedSeriesId) ||
+    series[0];
+
+  const chapters = Math.max(1, Number(selected.chapters || 1));
+  const done = Math.min(chapters, Math.max(0, Number(selected.done || 0)));
+  const pct = Math.round((done / chapters) * 100);
+  const pericopes = pericopesFor(selected);
+  const cursor = effectivePericopeIndex(selected);
+  const next = cursor < pericopes.length ? pericopes[cursor] : null;
+
+  const linkedEvents = [...state.data.events]
+    .filter((event) =>
+      String(event.series || "").toLowerCase() === String(selected.name || "").toLowerCase()
+      || String(event.passage || "").toLowerCase().includes(String(selected.name || "").toLowerCase())
+    )
+    .sort((a, b) => `${a.date}${a.time || ""}`.localeCompare(`${b.date}${b.time || ""}`));
+
+  const pastEvents = linkedEvents.filter((event) => event.date < today());
+  const futureLinked = linkedEvents.filter((event) => event.date >= today());
+
+  const chapterMap = Array.from({ length: chapters }, (_, index) => {
+    const chapter = index + 1;
+    const status = chapter <= done ? "done" : chapter === done + 1 ? "active" : "pending";
+    return `
+      <button class="v101-chapter ${status}" title="Capítulo ${chapter}">
+        <b>${chapter}</b>
+        <span>${status === "done" ? "✓" : status === "active" ? "◷" : "•"}</span>
+      </button>
+    `;
+  }).join("");
+
+  const timeline = pericopes.length
+    ? pericopes.slice(0, 9).map((item, index) => {
+        const status = index < cursor ? "done" : index === cursor ? "active" : "pending";
+        const event = linkedEvents.find((linked) =>
+          String(linked.passage || "").replace(/\s/g, "") === String(item.ref || "").replace(/\s/g, "")
+        );
+        return `
+          <div class="v101-timeline-item ${status}">
+            <span class="v101-timeline-dot">${status === "done" ? "✓" : status === "active" ? "" : ""}</span>
+            <div class="v101-timeline-copy">
+              <strong>${escapeHtml(item.ref)}</strong>
+              <small>${escapeHtml(item.title || "Pasaje de la serie")}</small>
+            </div>
+            <div class="v101-timeline-meta">
+              <span>${event ? fmt(event.date) : status === "done" ? "Completado" : "Por programar"}</span>
+              <b>${escapeHtml(event?.preacher || event?.guest || "Por asignar")}</b>
+            </div>
+          </div>
+        `;
+      }).join("")
+    : `
+      <div class="v101-no-pericopes">
+        <strong>Sin división de pasajes configurada</strong>
+        <span>Puedes continuar registrando el avance por capítulos.</span>
+      </div>
+    `;
+
   return `
-    <section class="view">
-      ${pageHead(
-        "Series bíblicas",
-        "Seguimiento del avance expositivo.",
-        `<button class="btn primary" data-action="series-new">＋ Serie</button>`
-      )}
+    <section class="view v101-series-view">
+      <div class="v101-series-topline">
+        <div>
+          <span>Series de estudio</span>
+          <b>/</b>
+          <strong>${escapeHtml(selected.name)}</strong>
+        </div>
+        <button class="btn primary" data-action="series-new">＋ Nueva serie</button>
+      </div>
 
-      <div class="grid-cards">
-        ${state.data.series.map((serie) => {
-          const chapters = Number(serie.chapters || 1);
-          const done = Number(serie.done || 0);
-          const pct = chapters ? Math.round((done / chapters) * 100) : 0;
-          const list = pericopesFor(serie);
-          const cursor = effectivePericopeIndex(serie);
-          const next = cursor < list.length ? list[cursor] : null;
+      <div class="v101-series-switcher">
+        ${series.map((item) => `
+          <button
+            class="v101-series-tab ${item.id === selected.id ? "active" : ""}"
+            data-action="series-open"
+            data-id="${item.id}"
+          >
+            <span>📖</span>
+            <div>
+              <strong>${escapeHtml(item.name)}</strong>
+              <small>${seriesPercent(item)}% completado</small>
+            </div>
+          </button>
+        `).join("")}
+      </div>
 
-          return `
-            <article class="info-card editable-card">
-              <h3>${escapeHtml(serie.name)}</h3>
-              <p>${done} de ${chapters} capítulos</p>
-              <div class="progress"><span style="width:${pct}%"></span></div>
-              <strong>${pct}% completado</strong>
-              <p>${escapeHtml(serie.notes || "")}</p>
+      <div class="v101-series-layout">
+        <main class="v101-series-main">
+          <section class="v101-series-hero">
+            <div class="v101-book-cover">
+              <span>SERIE EXPOSITIVA</span>
+              <strong>${escapeHtml(selected.name)}</strong>
+              <small>La Palabra estudiada con orden y fidelidad</small>
+            </div>
 
-              <div class="next-passage">
-                <span>Próximo pasaje sugerido (${cursor}/${list.length})</span>
-                ${
-                  next
-                    ? `<strong>${escapeHtml(next.ref)}</strong>${next.title ? `<small>${escapeHtml(next.title)}</small>` : ""}`
-                    : `<strong class="muted">Orden de pericopas completado</strong>`
-                }
+            <div class="v101-hero-copy">
+              <div class="v101-title-line">
+                <h1>${escapeHtml(selected.name)}</h1>
+                <span>En progreso</span>
               </div>
+              <p>${escapeHtml(selected.notes || `Estudio expositivo del libro de ${selected.name}.`)}</p>
 
-              <div class="card-actions">
-                <button class="btn ghost" data-action="series-edit" data-id="${serie.id}">Editar</button>
-                <button class="btn ghost" data-action="series-reset-order" data-id="${serie.id}">Reiniciar orden</button>
-                <button class="btn danger" data-action="series-delete" data-id="${serie.id}">Eliminar</button>
+              <div class="v101-hero-metrics">
+                <div><span>▣</span><small>Inicio</small><strong>${pastEvents[0] ? fmt(pastEvents[0].date) : "Por definir"}</strong></div>
+                <div><span>▤</span><small>Capítulos</small><strong>${chapters}</strong></div>
+                <div><span>◉</span><small>Predicaciones</small><strong>${linkedEvents.length}</strong></div>
+                <div><span>◔</span><small>Progreso</small><strong>${pct}%</strong></div>
               </div>
-            </article>
-          `;
-        }).join("")}
+            </div>
+
+            <div class="v101-progress-area">
+              <div class="v101-progress-ring" style="--progress:${pct}">
+                <div><strong>${pct}%</strong><span>Completado</span></div>
+              </div>
+              <button class="btn primary" data-action="series-edit" data-id="${selected.id}">✎ Editar serie</button>
+            </div>
+          </section>
+
+          <section class="v101-panel v101-map-panel">
+            <div class="v101-panel-head">
+              <div><h2>Mapa del libro</h2><p>Progreso por capítulos</p></div>
+              <div class="v101-map-legend">
+                <span><i class="done"></i>Completado</span>
+                <span><i class="active"></i>En progreso</span>
+                <span><i></i>Pendiente</span>
+              </div>
+            </div>
+            <div class="v101-chapter-map">${chapterMap}</div>
+            <div class="v101-map-progress">
+              <i style="width:${pct}%"></i>
+            </div>
+            <small>${done} de ${chapters} capítulos completados</small>
+          </section>
+
+          <div class="v101-content-grid">
+            <section class="v101-panel v101-timeline">
+              <div class="v101-panel-head">
+                <div><h2>Línea de tiempo de predicaciones</h2><p>Pasajes enseñados y próximos a enseñar</p></div>
+              </div>
+              <div>${timeline}</div>
+              <button class="v101-full-button" data-action="series-edit" data-id="${selected.id}">Administrar orden de la serie</button>
+            </section>
+
+            <div class="v101-middle-column">
+              <section class="v101-next-card">
+                <div class="v101-next-head">Próxima predicación sugerida</div>
+                <div class="v101-next-body">
+                  <span class="v101-next-icon">📖</span>
+                  <div>
+                    <h2>${next ? escapeHtml(next.ref) : "Serie completada"}</h2>
+                    <p>${next ? escapeHtml(next.title || "Próximo pasaje") : "No quedan pasajes pendientes"}</p>
+                  </div>
+                </div>
+                <div class="v101-next-meta">
+                  <div><small>Capítulo</small><strong>${next ? String(next.ref).match(/\d+/)?.[0] || "—" : "—"}</strong></div>
+                  <div><small>Lección</small><strong>${Math.min(cursor + 1, pericopes.length || 1)}</strong></div>
+                  <div><small>Estado</small><strong>${next ? "Por programar" : "Finalizada"}</strong></div>
+                </div>
+                <button class="btn primary" data-action="event-new">Asignar a una reunión</button>
+              </section>
+
+              <section class="v101-panel v101-stats-panel">
+                <div class="v101-panel-head"><div><h2>Estadísticas de la serie</h2></div></div>
+                <div class="v101-stats-grid">
+                  <div><span>◉</span><small>Predicaciones</small><strong>${linkedEvents.length}</strong></div>
+                  <div><span>◷</span><small>Capítulos avanzados</small><strong>${done}</strong></div>
+                  <div><span>▥</span><small>Próximas reuniones</small><strong>${futureLinked.length}</strong></div>
+                  <div><span>♙</span><small>Participantes</small><strong>${new Set(linkedEvents.map(e => e.preacher || e.guest).filter(Boolean)).size}</strong></div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </main>
+
+        <aside class="v101-series-aside">
+          <section class="v101-panel">
+            <div class="v101-panel-head">
+              <div><h2>Recursos de la serie</h2></div>
+              <button class="v101-text-button">Ver todo</button>
+            </div>
+            <div class="v101-resource-list">
+              <div><span class="pdf">PDF</span><p><strong>Guía de estudio</strong><small>Material de la serie</small></p></div>
+              <div><span class="doc">DOC</span><p><strong>Bosquejo general</strong><small>Estructura del libro</small></p></div>
+              <div><span class="ppt">PPT</span><p><strong>Presentación</strong><small>Diapositivas de apoyo</small></p></div>
+              <div><span class="pdf green">PDF</span><p><strong>Hoja de observación</strong><small>Método inductivo</small></p></div>
+            </div>
+            <button class="v101-full-button">＋ Agregar recurso</button>
+          </section>
+
+          <section class="v101-panel">
+            <div class="v101-panel-head">
+              <div><h2>Reuniones vinculadas</h2></div>
+              <button class="v101-text-button" data-view="calendar">Ver calendario</button>
+            </div>
+            <div class="v101-linked-list">
+              ${
+                futureLinked.length
+                  ? futureLinked.slice(0, 4).map((event) => `
+                      <button data-action="event-edit" data-id="${event.id}">
+                        <span><small>${MONTHS[Number(event.date.slice(5,7))-1].slice(0,3).toUpperCase()}</small><b>${event.date.slice(8,10)}</b></span>
+                        <div>
+                          <strong>${escapeHtml(event.type)}</strong>
+                          <small>${escapeHtml(event.passage || "Pasaje por definir")}</small>
+                          <em>${escapeHtml(event.preacher || event.guest || "Predicador por confirmar")}</em>
+                        </div>
+                        <time>${escapeHtml(event.time || "")}</time>
+                      </button>
+                    `).join("")
+                  : `<p class="muted">No hay reuniones futuras vinculadas.</p>`
+              }
+            </div>
+          </section>
+
+          <section class="v101-inkfaith-card">
+            <div class="v101-inkfaith-head">
+              <span>✒</span>
+              <div><strong>Integrado con InkFaith</strong><small>Recursos para preparar y enseñar</small></div>
+            </div>
+            <div class="v101-inkfaith-tools">
+              <div><span>📖</span><small>Guías de estudio</small></div>
+              <div><span>▤</span><small>Hojas de observación</small></div>
+              <div><span>▥</span><small>Cuadernos de notas</small></div>
+              <div><span>📚</span><small>Material imprimible</small></div>
+            </div>
+          </section>
+
+          <div class="v101-series-actions">
+            <button class="btn ghost" data-action="series-reset-order" data-id="${selected.id}">Reiniciar orden</button>
+            <button class="btn danger" data-action="series-delete" data-id="${selected.id}">Eliminar serie</button>
+          </div>
+        </aside>
       </div>
     </section>
   `;
@@ -1600,6 +1810,10 @@ document.addEventListener("click", async (event) => {
     if (action === "guest-save") await saveGuest(id);
     if (action === "guest-delete") await deleteGuest(id);
 
+    if (action === "series-open") {
+      state.selectedSeriesId = id;
+      render();
+    }
     if (action === "series-new") openModal("series");
     if (action === "series-edit") openModal("series", { id });
     if (action === "series-save") await saveSeries(id);

@@ -1,4 +1,4 @@
-const CACHE_NAME = "liturgica-v10-ministry-dashboard-shell";
+const CACHE_NAME = "liturgica-v10-1-series-estudio-shell";
 const SHELL = [
   "./",
   "./index.html",
